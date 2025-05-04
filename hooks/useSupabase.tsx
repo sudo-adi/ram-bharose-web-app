@@ -1,0 +1,1044 @@
+import { supabase } from "@/lib/supabase";
+import { useState, useEffect } from "react";
+// Form Types
+interface EventFormData {
+  userId: string;
+  name: string;
+  description: string;
+  startTime: string;
+  duration: string;
+  organizers: string[]; // Changed to string array
+  image?: File;
+}
+
+interface DonationFormData {
+  userId: string;
+  amount: number;
+  description: string;
+  cause: string;
+  openTill: string;
+  image?: File;
+}
+
+// Types
+type Profile = {
+  id: number;
+  family_no: string;
+  surname: string;
+  name: string;
+  fathers_or_husbands_name: string;
+  father_in_laws_name: string;
+  gender: string;
+  relationship: string;
+  marital_status: string;
+  marriage_date: string;
+  date_of_birth: string;
+  education: string;
+  stream: string;
+  qualification: string;
+  occupation: string;
+  email: string;
+  profile_pic: string;
+  family_cover_pic: string;
+  blood_group: string;
+  native_place: string;
+  residential_address_line1: string;
+  residential_address_state: string;
+  residential_address_city: string;
+  pin_code: string;
+  residential_landline: string;
+  office_address: string;
+  office_address_state: string;
+  office_address_city: string;
+  office_address_pin: string;
+  landline_office: string;
+  mobile_no1: string;
+  mobile_no2: string;
+  date_of_demise: string;
+};
+
+type UseQueryResult<T> = {
+  data: T | null;
+  error: Error | null;
+  loading: boolean;
+};
+
+type Committee = {
+  id: number;
+  created_at: string;
+  name: string;
+  phone: string;
+  location: string;
+  member_name: string;
+};
+
+// Hooks for Profile-related queries
+// Updated hook with pagination and search
+export const useProfiles = (page = 1, pageSize = 20, searchQuery = "") => {
+  const [result, setResult] = useState<
+    UseQueryResult<{ data: Profile[]; count: number }>
+  >({
+    data: null,
+    error: null,
+    loading: true,
+  });
+
+  const fetchProfiles = async () => {
+    try {
+      setResult((prev) => ({ ...prev, loading: true }));
+
+      // Calculate range for pagination
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      // Create query with pagination
+      let query = supabase
+        .from("profiles")
+        .select("*", { count: "exact" })
+        .range(from, to);
+
+      // Add search filter if provided
+      if (searchQuery) {
+        query = query.or(
+          `name.ilike.%${searchQuery}%,surname.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%,mobile_no1.ilike.%${searchQuery}%`
+        );
+      }
+
+      const { data, error, count } = await query;
+
+      if (error) throw error;
+
+      setResult({
+        data: { data: data || [], count: count || 0 },
+        error: null,
+        loading: false,
+      });
+    } catch (error) {
+      setResult({
+        data: null,
+        error: error as Error,
+        loading: false,
+      });
+    }
+  };
+
+  useEffect(() => {
+    fetchProfiles();
+  }, [page, pageSize, searchQuery]);
+
+  return { ...result, refetch: fetchProfiles };
+};
+
+export const useProfile = (id: number) => {
+  const [result, setResult] = useState<UseQueryResult<Profile>>({
+    data: null,
+    error: null,
+    loading: true,
+  });
+
+  const fetchProfile = async () => {
+    try {
+      setResult((prev) => ({ ...prev, loading: true }));
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (error) throw error;
+
+      setResult({
+        data,
+        error: null,
+        loading: false,
+      });
+    } catch (error) {
+      setResult({
+        data: null,
+        error: error as Error,
+        loading: false,
+      });
+    }
+  };
+
+  useEffect(() => {
+    fetchProfile();
+  }, [id]);
+
+  return { ...result, refetch: fetchProfile };
+};
+
+// Form submission hooks
+export const useFormSubmission = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const uploadImage = async (file: File, id: number) => {
+    try {
+      // Convert File to ArrayBuffer
+      const arrayBuffer = await file.arrayBuffer();
+      // Convert ArrayBuffer to Uint8Array for Supabase storage
+      const uint8Array = new Uint8Array(arrayBuffer);
+
+      const fileExtension = file.name.split(".").pop() || "jpg";
+      const filePath = `${id}.${fileExtension}`;
+      const contentType = file.type;
+
+      const { data, error } = await supabase.storage
+        .from("application-pictures")
+        .upload(filePath, uint8Array, { contentType });
+
+      if (error) {
+        console.error(error);
+        throw error;
+      }
+      return data.path;
+    } catch (error: any) {
+      throw new Error(error);
+    }
+  };
+
+  const submitEvent = async (formData: EventFormData) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Convert organizers array to PostgreSQL array format
+      const organizersArray = `{${formData.organizers.join(",")}}`;
+
+      // First submit the event data without image
+      const { data: eventData, error: insertError } = await supabase
+        .from("event_applications")
+        .insert([
+          {
+            user_id: formData.userId,
+            name: formData.name,
+            description: formData.description,
+            start_at: formData.startTime,
+            duration: formData.duration,
+            organizers: organizersArray,
+          },
+        ])
+        .select();
+
+      if (insertError) throw insertError;
+
+      // Then upload image if exists using the event ID
+      let imagePath = null;
+      if (formData.image && eventData?.[0]?.id) {
+        imagePath = await uploadImage(formData.image, eventData[0].id);
+
+        // Update the event with image path
+        const { error: updateError } = await supabase
+          .from("event_applications")
+          .update({ image_url: imagePath })
+          .eq("id", eventData[0].id);
+
+        if (updateError) throw updateError;
+      }
+
+      return true;
+    } catch (error: any) {
+      setError(error.message);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const submitDonation = async (formData: DonationFormData) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      // First submit the donation data without image
+      const { data: donationData, error: insertError } = await supabase
+        .from("donation_applications")
+        .insert([
+          {
+            user_id: formData.userId,
+            amount: formData.amount,
+            description: formData.description,
+            cause: formData.cause,
+            open_till: formData.openTill,
+          },
+        ])
+        .select();
+
+      if (insertError) throw insertError;
+
+      // Then upload image if exists using the donation ID
+      let imagePath = null;
+      if (formData.image && donationData?.[0]?.id) {
+        imagePath = await uploadImage(formData.image, donationData[0].id);
+
+        // Update the donation with image path
+        const { error: updateError } = await supabase
+          .from("donation_applications")
+          .update({ image_url: imagePath })
+          .eq("id", donationData[0].id);
+
+        if (updateError) throw updateError;
+      }
+
+      return true;
+    } catch (error: any) {
+      setError(error.message);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return {
+    loading,
+    error,
+    submitEvent,
+    submitDonation,
+  };
+};
+
+export const useBirthdays = (filter: "today" | "month" | "all" = "all") => {
+  const [result, setResult] = useState<UseQueryResult<any[]>>({
+    // Changed from Profile[] to any[]
+    data: null,
+    error: null,
+    loading: true,
+  });
+
+  const fetchBirthdays = async () => {
+    try {
+      setResult((prev) => ({ ...prev, loading: true }));
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("name, surname, date_of_birth, profile_pic, mobile_no1, email")
+        .not("date_of_birth", "is", null);
+
+      if (error) throw error;
+
+      // Transform and filter the data
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentDay = now.getDate();
+
+      const monthAbbreviations = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+      ];
+
+      const transformedData = data
+        .map((profile) => {
+          if (!profile.date_of_birth) return null;
+
+          try {
+            // More robust date parsing
+            const parts = profile.date_of_birth.split("/");
+            if (parts.length !== 3) return null;
+
+            const [day, monthAbbr, yearPart] = parts;
+            const monthIndex = monthAbbreviations.findIndex(
+              (m) => m.toLowerCase() === monthAbbr.toLowerCase()
+            );
+
+            if (monthIndex === -1) return null;
+
+            const parsedDay = parseInt(day);
+            if (isNaN(parsedDay)) return null;
+
+            let fullYear = parseInt(yearPart);
+            if (isNaN(fullYear)) return null;
+
+            if (yearPart.length === 2) {
+              fullYear = fullYear < 50 ? 2000 + fullYear : 1900 + fullYear;
+            }
+
+            const birthDate = new Date(fullYear, monthIndex, parsedDay);
+            let age = now.getFullYear() - birthDate.getFullYear();
+
+            if (
+              now.getMonth() < monthIndex ||
+              (now.getMonth() === monthIndex && now.getDate() < parsedDay)
+            ) {
+              age--;
+            }
+
+            const displayDate = new Date(
+              now.getFullYear(),
+              monthIndex,
+              parsedDay
+            ).toLocaleDateString("en-US", {
+              month: "long",
+              day: "numeric",
+            });
+
+            return {
+              id: `${profile.name}-${profile.date_of_birth}`,
+              name: `${profile.name} ${profile.surname || ""}`.trim(),
+              age: age.toString(),
+              date: displayDate,
+              image:
+                profile.profile_pic ||
+                "https://t3.ftcdn.net/jpg/05/16/27/58/360_F_516275801_f3Fsp17x6HQK0xQgDQEELoTuERO4SsWV.jpg",
+              phone: profile.mobile_no1,
+              email: profile.email,
+              monthIndex,
+              day: parsedDay,
+            };
+          } catch (e) {
+            console.error("Error parsing date:", profile.date_of_birth, e);
+            return null;
+          }
+        })
+        .filter(Boolean)
+        .filter((birthday) => {
+          if (!birthday) return false; // Add null check
+
+          if (filter === "today") {
+            return (
+              birthday.monthIndex === currentMonth &&
+              birthday.day === currentDay
+            );
+          } else if (filter === "month") {
+            return birthday.monthIndex === currentMonth;
+          }
+          return true;
+        })
+        .sort((a, b) => {
+          // Add null checks for a and b
+          if (!a || !b) return 0;
+
+          if (a.monthIndex !== b.monthIndex) {
+            return a.monthIndex - b.monthIndex;
+          }
+          return a.day - b.day;
+        });
+
+      setResult({
+        data: transformedData,
+        error: null,
+        loading: false,
+      });
+    } catch (error) {
+      console.error("Error fetching birthdays:", error);
+      setResult({
+        data: null,
+        error: error as Error,
+        loading: false,
+      });
+    }
+  };
+
+  useEffect(() => {
+    fetchBirthdays();
+  }, [filter]);
+
+  return { ...result, refetch: fetchBirthdays };
+};
+
+export const useFamilyVerification = (familyCode: string) => {
+  const [result, setResult] = useState<UseQueryResult<Profile[]>>({
+    data: null,
+    error: null,
+    loading: true,
+  });
+
+  const verifyFamilyCode = async () => {
+    try {
+      setResult((prev) => ({ ...prev, loading: true }));
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("family_no", familyCode);
+
+      if (error) throw error;
+
+      setResult({
+        data,
+        error: null,
+        loading: false,
+      });
+    } catch (error) {
+      setResult({
+        data: null,
+        error: error as Error,
+        loading: false,
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (familyCode) {
+      verifyFamilyCode();
+    }
+  }, [familyCode]);
+
+  return { ...result, refetch: verifyFamilyCode };
+};
+
+export const useCommittees = () => {
+  const [result, setResult] = useState<UseQueryResult<Committee[]>>({
+    data: null,
+    error: null,
+    loading: true,
+  });
+
+  const fetchCommittees = async () => {
+    try {
+      setResult((prev) => ({ ...prev, loading: true }));
+      const { data, error } = await supabase
+        .from("committee") // Make sure this matches your table name exactly
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      setResult({
+        data,
+        error: null,
+        loading: false,
+      });
+    } catch (error) {
+      setResult({
+        data: null,
+        error: error as Error,
+        loading: false,
+      });
+    }
+  };
+
+  useEffect(() => {
+    fetchCommittees();
+  }, []);
+
+  // Add committee function
+  const addCommittee = async (committeeData: {
+    name: string;
+    location: string;
+    member_name: string;
+    phone: string;
+  }) => {
+    try {
+      const { error } = await supabase
+        .from("committee")
+        .insert([committeeData]);
+
+      if (error) throw error;
+
+      // Refresh the data after adding
+      await fetchCommittees();
+      return { success: true, error: null };
+    } catch (error) {
+      return { success: false, error: error as Error };
+    }
+  };
+
+  // Update committee function
+  const updateCommittee = async (
+    committeeId: number,
+    updatedData: Partial<Committee>
+  ) => {
+    try {
+      const { error } = await supabase
+        .from("committee")
+        .update(updatedData)
+        .eq("id", committeeId);
+
+      if (error) throw error;
+
+      // Refresh the data after update
+      await fetchCommittees();
+      return { success: true, error: null };
+    } catch (error) {
+      return { success: false, error: error as Error };
+    }
+  };
+
+  // Delete committee function
+  const deleteCommittee = async (committeeId: number) => {
+    try {
+      const { error } = await supabase
+        .from("committee")
+        .delete()
+        .eq("id", committeeId);
+
+      if (error) throw error;
+
+      // Refresh the data after deletion
+      await fetchCommittees();
+      return { success: true, error: null };
+    } catch (error) {
+      return { success: false, error: error as Error };
+    }
+  };
+
+  // Add committee member function
+  const addCommitteeMember = async (committeeData: {
+    committee_name: string;
+    member_name: string;
+    phone: string;
+    location?: string;
+  }) => {
+    try {
+      const { error } = await supabase.from("committee").insert([
+        {
+          name: committeeData.committee_name,
+          member_name: committeeData.member_name,
+          phone: committeeData.phone,
+          location: committeeData.location,
+        },
+      ]);
+
+      if (error) throw error;
+
+      // Refresh the data after adding
+      await fetchCommittees();
+      return { success: true, error: null };
+    } catch (error) {
+      return { success: false, error: error as Error };
+    }
+  };
+
+  return {
+    ...result,
+    refetch: fetchCommittees,
+    addCommittee,
+    updateCommittee,
+    deleteCommittee,
+    addCommitteeMember, // Add this new function to the return object
+  };
+};
+
+// Add this type to your existing types
+type CommitteeImage = {
+  name: string;
+  url: string;
+  created_at: string;
+  size: number;
+  contentType: string;
+};
+
+// Add this hook to your existing hooks
+export const useCommitteeImages = () => {
+  const [result, setResult] = useState<UseQueryResult<CommitteeImage[]>>({
+    data: null,
+    error: null,
+    loading: true,
+  });
+
+  const fetchCommitteeImages = async () => {
+    try {
+      setResult((prev) => ({ ...prev, loading: true }));
+
+      // List all files in the committee_pictures bucket
+      const { data: files, error } = await supabase.storage
+        .from("committee-pictures")
+        .list();
+
+      if (error) throw error;
+
+      // Get public URLs for each image
+      const images = await Promise.all(
+        files.map(async (file) => {
+          const {
+            data: { publicUrl },
+          } = supabase.storage
+            .from("committee-pictures")
+            .getPublicUrl(file.name);
+
+          return {
+            name: file.name,
+            url: publicUrl,
+            created_at: file.created_at,
+            size: file.metadata?.size || 0,
+            contentType: file.metadata?.mimetype || "image/jpeg",
+          };
+        })
+      );
+
+      setResult({
+        data: images,
+        error: null,
+        loading: false,
+      });
+    } catch (error) {
+      setResult({
+        data: null,
+        error: error as Error,
+        loading: false,
+      });
+    }
+  };
+
+  useEffect(() => {
+    fetchCommitteeImages();
+  }, []);
+
+  return { ...result, refetch: fetchCommitteeImages };
+};
+
+// Add this type to your existing types
+type Doctor = {
+  id: number;
+  name: string;
+  specialization: string;
+  qualification: string;
+  experience_years: number;
+  clinic_address: string;
+  contact_email: string;
+  contact_phone: string;
+  available_timings: string;
+  created_at: string;
+};
+
+export const useDoctors = (page = 1, pageSize = 9, searchQuery = "") => {
+  const [result, setResult] = useState<
+    UseQueryResult<{ data: Doctor[]; count: number }>
+  >({
+    data: null,
+    error: null,
+    loading: true,
+  });
+
+  const fetchDoctors = async () => {
+    try {
+      setResult((prev) => ({ ...prev, loading: true }));
+
+      // Calculate range for pagination
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      // Create query with pagination
+      let query = supabase
+        .from("doctors")
+        .select("*", { count: "exact" })
+        .order("created_at", { ascending: false })
+        .range(from, to);
+
+      // Add search filter if provided
+      if (searchQuery) {
+        query = query.or(
+          `name.ilike.%${searchQuery}%,specialization.ilike.%${searchQuery}%,qualification.ilike.%${searchQuery}%`
+        );
+      }
+
+      const { data, error, count } = await query;
+
+      if (error) throw error;
+
+      setResult({
+        data: { data: data || [], count: count || 0 },
+        error: null,
+        loading: false,
+      });
+    } catch (error) {
+      setResult({
+        data: null,
+        error: error as Error,
+        loading: false,
+      });
+    }
+  };
+
+  useEffect(() => {
+    fetchDoctors();
+  }, [page, pageSize, searchQuery]);
+
+  // Add update doctor function
+  const updateDoctor = async (
+    doctorId: number,
+    updatedData: Partial<Doctor>
+  ) => {
+    try {
+      const { error } = await supabase
+        .from("doctors")
+        .update(updatedData)
+        .eq("id", doctorId);
+
+      if (error) throw error;
+
+      // Refresh the data after update
+      await fetchDoctors();
+      return { success: true, error: null };
+    } catch (error) {
+      return { success: false, error: error as Error };
+    }
+  };
+
+  return { ...result, refetch: fetchDoctors, updateDoctor };
+};
+
+// Add this type to your existing types
+type ShubhChintak = {
+  id: number;
+  created_at: string;
+  file_url: string;
+  title: string;
+  cover_image_name: string;
+  cover_image_url?: string; // This will be added after fetching from storage
+};
+
+// Update the useShubhChintak hook
+export const useShubhChintak = (limit?: number) => {
+  const [result, setResult] = useState<UseQueryResult<ShubhChintak[]>>({
+    data: null,
+    error: null,
+    loading: true,
+  });
+
+  const fetchShubhChintak = async () => {
+    try {
+      setResult((prev) => ({ ...prev, loading: true }));
+
+      // 1. Fetch magazine data from the table
+      let query = supabase
+        .from("shubh_chintak")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (limit) {
+        query = query.limit(limit);
+      }
+
+      const { data: magazines, error: tableError } = await query;
+
+      if (tableError) throw tableError;
+
+      if (!magazines || magazines.length === 0) {
+        setResult({
+          data: [],
+          error: null,
+          loading: false,
+        });
+        return;
+      }
+
+      // 2. Get cover image URLs from storage
+      const magazinesWithImages = await Promise.all(
+        magazines.map(async (magazine) => {
+          if (magazine.cover_image_name) {
+            const {
+              data: { publicUrl },
+            } = supabase.storage
+              .from("shubh-chintak")
+              .getPublicUrl(`magzine-cover/${magazine.cover_image_name}.png`);
+
+            return {
+              ...magazine,
+              cover_image_url: publicUrl,
+            };
+          }
+          return magazine;
+        })
+      );
+
+      setResult({
+        data: magazinesWithImages,
+        error: null,
+        loading: false,
+      });
+    } catch (error) {
+      setResult({
+        data: null,
+        error: error as Error,
+        loading: false,
+      });
+    }
+  };
+
+  useEffect(() => {
+    fetchShubhChintak();
+  }, [limit]);
+
+  return { ...result, refetch: fetchShubhChintak };
+};
+
+// Add this type definition before the useFamilies hook
+type Family = {
+  id: string; // family_no
+  name: string; // surname + family name
+  headName: string; // head of family name
+  headImage: string; // head profile pic
+  coverImage: string; // family cover pic
+  address: string; // residential address
+  city: string; // city
+  state: string; // state
+  totalMembers: number; // count of members
+  members: FamilyMember[]; // array of family members
+};
+
+// You'll also need to add the FamilyMember type
+type FamilyMember = {
+  id: number;
+  name: string;
+  surname: string;
+  relationship: string;
+  gender: string;
+  date_of_birth: string;
+  occupation: string;
+  email: string;
+  profile_pic: string;
+  blood_group: string;
+  mobile_no1: string;
+  mobile_no2: string;
+  education: string;
+  qualification: string;
+};
+
+// New hook for fetching distinct family numbers and their members
+export const useFamilies = (page = 1, pageSize = 12, searchQuery = "") => {
+  const [result, setResult] = useState<
+    UseQueryResult<{ families: Family[]; count: number }>
+  >({
+    data: null,
+    error: null,
+    loading: true,
+  });
+
+  const fetchFamilies = async () => {
+    try {
+      setResult((prev) => ({ ...prev, loading: true }));
+
+      // Step 1: First fetch distinct family numbers with pagination
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      // Query to get distinct family numbers
+      let familyQuery = supabase
+        .from("profiles")
+        .select("family_no", { count: "exact" })
+        .not("family_no", "is", null)
+        .order("family_no")
+        .range(from, to);
+
+      // Add search filter if provided
+      if (searchQuery) {
+        // We'll need to join with the full profiles to search by name/surname
+        // This is a simplified approach - in a real app, you might need a more complex query
+        familyQuery = supabase
+          .from("profiles")
+          .select("family_no", { count: "exact" })
+          .not("family_no", "is", null)
+          .or(`name.ilike.%${searchQuery}%,surname.ilike.%${searchQuery}%`)
+          .order("family_no")
+          .range(from, to);
+      }
+
+      const { data: familyNos, error: familyError, count } = await familyQuery;
+
+      if (familyError) throw familyError;
+
+      if (!familyNos || familyNos.length === 0) {
+        setResult({
+          data: { families: [], count: 0 },
+          error: null,
+          loading: false,
+        });
+        return;
+      }
+
+      // Step 2: Fetch all profiles for these family numbers
+      const uniqueFamilyNos = [...new Set(familyNos.map((f) => f.family_no))];
+
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("*")
+        .in("family_no", uniqueFamilyNos);
+
+      if (profilesError) throw profilesError;
+
+      // Step 3: Group profiles by family_no and process them
+      const familyGroups: Record<string, any[]> = {};
+
+      // Group profiles by family_no
+      profilesData?.forEach((profile) => {
+        if (!profile.family_no) return;
+
+        if (!familyGroups[profile.family_no]) {
+          familyGroups[profile.family_no] = [];
+        }
+        familyGroups[profile.family_no].push(profile);
+      });
+
+      // Process each family group
+      const processedFamilies = uniqueFamilyNos
+        .filter((familyNo) => familyGroups[familyNo])
+        .map((familyNo) => {
+          const members = familyGroups[familyNo];
+
+          // Find the head of the family (assuming it's the first member or one with relationship = "Self")
+          const headMember =
+            members.find((m) => m.relationship?.toLowerCase() === "self") ||
+            members[0];
+
+          // Create family members list
+          const membersList = members.map((member) => ({
+            id: member.id,
+            name: member.name,
+            surname: member.surname || "",
+            relationship: member.relationship || "",
+            gender: member.gender || "",
+            date_of_birth: member.date_of_birth || "",
+            occupation: member.occupation || "",
+            email: member.email || "",
+            profile_pic:
+              member.profile_pic ||
+              "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?q=80&w=300",
+            blood_group: member.blood_group || "",
+            mobile_no1: member.mobile_no1 || "",
+            mobile_no2: member.mobile_no2 || "",
+            education: member.education || "",
+            qualification: member.qualification || "",
+          }));
+
+          return {
+            id: familyNo,
+            name: `${headMember.surname || ""} Family`,
+            headName: `${headMember.name} ${headMember.surname || ""}`.trim(),
+            headImage:
+              headMember.profile_pic ||
+              "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?q=80&w=300",
+            coverImage:
+              headMember.family_cover_pic ||
+              "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?q=80&w=2000",
+            address: headMember.residential_address_line1 || "",
+            city: headMember.residential_address_city || "",
+            state: headMember.residential_address_state || "",
+            totalMembers: members.length,
+            members: membersList,
+          };
+        });
+
+      setResult({
+        data: {
+          families: processedFamilies,
+          count: count || 0,
+        },
+        error: null,
+        loading: false,
+      });
+    } catch (error) {
+      setResult({
+        data: null,
+        error: error as Error,
+        loading: false,
+      });
+    }
+  };
+
+  useEffect(() => {
+    fetchFamilies();
+  }, [page, pageSize, searchQuery]);
+
+  return { ...result, refetch: fetchFamilies };
+};
