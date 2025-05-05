@@ -57,6 +57,16 @@ type Profile = {
   date_of_demise: string;
 };
 
+interface Article {
+  id: string;
+  user_id: string;
+  title: string;
+  body: string;
+  image: string;
+  created_at: string;
+  userName: string;
+}
+
 type UseQueryResult<T> = {
   data: T | null;
   error: Error | null;
@@ -72,9 +82,32 @@ type Committee = {
   member_name: string;
 };
 
-// Hooks for Profile-related queries
-// Updated hook with pagination and search
-export const useProfiles = (page = 1, pageSize = 20, searchQuery = "") => {
+type Business = {
+  id: string;
+  user_id: string;
+  name: string;
+  category: string;
+  description: string;
+  location: string;
+  contact_email: string;
+  contact_phone: string;
+  website: string;
+  created_at: string;
+  images?: string[];
+  logo?: string;
+  owner?: {
+    name: string;
+    image: string;
+  };
+};
+
+// Updated hook with pagination, search, and filters
+export const useProfiles = (
+  page = 1,
+  pageSize = 20,
+  searchQuery = "",
+  filters = {}
+) => {
   const [result, setResult] = useState<
     UseQueryResult<{ data: Profile[]; count: number }>
   >({
@@ -104,6 +137,15 @@ export const useProfiles = (page = 1, pageSize = 20, searchQuery = "") => {
         );
       }
 
+      // Apply additional filters if provided
+      if (filters && Object.keys(filters).length > 0) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined && value !== null && value !== "") {
+            query = query.eq(key, value);
+          }
+        });
+      }
+
       const { data, error, count } = await query;
 
       if (error) throw error;
@@ -124,7 +166,7 @@ export const useProfiles = (page = 1, pageSize = 20, searchQuery = "") => {
 
   useEffect(() => {
     fetchProfiles();
-  }, [page, pageSize, searchQuery]);
+  }, [page, pageSize, searchQuery, JSON.stringify(filters)]);
 
   return { ...result, refetch: fetchProfiles };
 };
@@ -778,6 +820,85 @@ export const useDoctors = (page = 1, pageSize = 9, searchQuery = "") => {
   return { ...result, refetch: fetchDoctors, updateDoctor };
 };
 
+// Hooks for Business-related queries
+export const useBusiness = () => {
+  const [result, setResult] = useState<UseQueryResult<Business[]>>({
+    data: null,
+    error: null,
+    loading: true,
+  });
+
+  const fetchBusinesses = async () => {
+    try {
+      setResult((prev) => ({ ...prev, loading: true }));
+      const { data, error } = await supabase.from("businesses").select("*");
+
+      if (error) throw error;
+
+      // Fetch images and logo for each business
+      const businessesWithImages = await Promise.all(
+        data.map(async (business) => {
+          // Get business logo
+          const { data: logoData } = await supabase.storage
+            .from("businesses")
+            .list(`${business.user_id}/logo`);
+
+          const logoUrl =
+            logoData && logoData.length > 0
+              ? (
+                  await supabase.storage
+                    .from("businesses")
+                    .getPublicUrl(
+                      `${business.user_id}/logo/${logoData[0].name}`
+                    )
+                ).data.publicUrl
+              : null;
+
+          // Get business images
+          const { data: imagesData } = await supabase.storage
+            .from("businesses")
+            .list(`${business.user_id}/images`);
+
+          const imageUrls = await Promise.all(
+            (imagesData || []).map(async (image) => {
+              const {
+                data: { publicUrl },
+              } = await supabase.storage
+                .from("businesses")
+                .getPublicUrl(`${business.user_id}/images/${image.name}`);
+              return publicUrl;
+            })
+          );
+
+          return {
+            ...business,
+            logo: logoUrl,
+            images: imageUrls,
+          };
+        })
+      );
+
+      setResult({
+        data: businessesWithImages,
+        error: null,
+        loading: false,
+      });
+    } catch (error) {
+      setResult({
+        data: null,
+        error: error as Error,
+        loading: false,
+      });
+    }
+  };
+
+  useEffect(() => {
+    fetchBusinesses();
+  }, []);
+
+  return { ...result, refetch: fetchBusinesses };
+};
+
 // Add this type to your existing types
 type ShubhChintak = {
   id: number;
@@ -896,6 +1017,75 @@ type FamilyMember = {
 };
 
 // New hook for fetching distinct family numbers and their members
+export const useNews = () => {
+  const [result, setResult] = useState<UseQueryResult<Article[]>>({
+    data: null,
+    error: null,
+    loading: true,
+  });
+
+  const fetchNews = async () => {
+    try {
+      setResult((prev) => ({ ...prev, loading: true }));
+      const { data: articles, error: articlesError } = await supabase
+        .from("articles")
+        .select("*");
+
+      if (articlesError) throw articlesError;
+
+      const articlesWithUserNames = await Promise.all(
+        articles.map(async (article) => {
+          const { data: userProfile, error: profileError } = await supabase
+            .from("profiles")
+            .select("name")
+            .eq("id", article.user_id)
+            .single();
+
+          if (profileError) throw profileError;
+
+          return {
+            ...article,
+            userName: userProfile.name,
+          };
+        })
+      );
+
+      const articlesWithImages = await Promise.all(
+        articlesWithUserNames.map(async (article) => {
+          const { data: imageData } = await supabase.storage
+            .from("articles")
+            .getPublicUrl(article.user_id);
+
+          return {
+            ...article,
+            image: imageData.publicUrl + ".jpg",
+          };
+        })
+      );
+
+      if (!articlesWithImages) throw new Error("No articles found");
+
+      setResult({
+        data: articlesWithImages,
+        error: null,
+        loading: false,
+      });
+    } catch (error) {
+      setResult({
+        data: null,
+        error: error as Error,
+        loading: false,
+      });
+    }
+  };
+
+  useEffect(() => {
+    fetchNews();
+  }, []);
+
+  return { ...result, refetch: fetchNews };
+};
+
 export const useFamilies = (page = 1, pageSize = 12, searchQuery = "") => {
   const [result, setResult] = useState<
     UseQueryResult<{ families: Family[]; count: number }>
@@ -1041,4 +1231,37 @@ export const useFamilies = (page = 1, pageSize = 12, searchQuery = "") => {
   }, [page, pageSize, searchQuery]);
 
   return { ...result, refetch: fetchFamilies };
+};
+
+// Hook for adding a new profile
+export const useAddProfile = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const [success, setSuccess] = useState(false);
+
+  const addProfile = async (profileData: Partial<Profile>) => {
+    setLoading(true);
+    setError(null);
+    setSuccess(false);
+
+    try {
+      // Insert the profile data
+      const { data, error } = await supabase
+        .from("profiles")
+        .insert([profileData])
+        .select();
+
+      if (error) throw error;
+
+      setSuccess(true);
+      return { success: true, data };
+    } catch (err) {
+      setError(err as Error);
+      return { success: false, error: err };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { addProfile, loading, error, success };
 };

@@ -12,6 +12,10 @@ import {
   ClipboardList,
   HandCoins,
   Shield,
+  UserPlus,
+  FilePlus,
+  UserPlus2,
+  PenLine,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -21,13 +25,13 @@ import { MembersSection } from "./components/MembersSection";
 import { FamiliesSection } from "./components/FamiliesSection";
 import { DoctorsSection } from "./components/DoctorsSection";
 import { EventsSection } from "./components/EventsSection";
-import { NewsSection } from "./components/NewsSection";
 import { ShubhChintakSection } from "./components/ShubhChintakSection";
-import { ApplicationsSection } from "./components/ApplicationsSection";
 import { DonationsSection } from "./components/DonationsSection";
-import { NariSahasSection } from "./components/NariSahasSection";
 import { LogOut } from "lucide-react";
 import CommittiesSection from "./components/CommittiesSection";
+import ApplicationsSection from "./components/ApplicationsSection";
+import NariSahasSection from "./components/NariSahasSection";
+import NewsSection from "./components/NewsSection";
 
 // Remove the section components from this file and keep the rest of the code
 export default function Dashboard() {
@@ -45,6 +49,37 @@ export default function Dashboard() {
     { name: "Applications", icon: <ClipboardList className="h-4 w-4" /> },
     { name: "Donations", icon: <HandCoins className="h-4 w-4" /> },
     { name: "Nari Sahas", icon: <Shield className="h-4 w-4" /> },
+  ];
+
+  const quickActions = [
+    {
+      name: "Add Member",
+      icon: <UserPlus className="h-5 w-5" />,
+      onClick: () => setActiveSection("Members"),
+      bgColor: "from-blue-500 to-blue-600",
+      hoverColor: "hover:from-blue-600 hover:to-blue-700",
+    },
+    {
+      name: "Add Doctor",
+      icon: <Stethoscope className="h-5 w-5" />,
+      onClick: () => setActiveSection("Doctors"),
+      bgColor: "from-green-500 to-green-600",
+      hoverColor: "hover:from-green-600 hover:to-green-700",
+    },
+    {
+      name: "Add Committee",
+      icon: <UserPlus2 className="h-5 w-5" />,
+      onClick: () => setActiveSection("Committies"),
+      bgColor: "from-purple-500 to-purple-600",
+      hoverColor: "hover:from-purple-600 hover:to-purple-700",
+    },
+    {
+      name: "Post News",
+      icon: <PenLine className="h-5 w-5" />,
+      onClick: () => setActiveSection("News"),
+      bgColor: "from-amber-500 to-amber-600",
+      hoverColor: "hover:from-amber-600 hover:to-amber-700",
+    },
   ];
 
   const handleLogout = () => {
@@ -116,16 +151,6 @@ export default function Dashboard() {
                   </Button>
                 ))}
               </div>
-              <div className="mt-auto pt-4 border-t">
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start"
-                  onClick={handleLogout}
-                >
-                  <LogOut className="h-4 w-4" />
-                  <span className="ml-2">Log Out</span>
-                </Button>
-              </div>
             </div>
           </div>
         </div>
@@ -144,6 +169,28 @@ export default function Dashboard() {
       {/* Main content */}
       <div className="flex-1 overflow-auto p-6">
         <h1 className="text-2xl font-bold mb-6">{activeSection}</h1>
+
+        {/* Quick Actions Section - Only visible on Dashboard */}
+        {activeSection === "Dashboard" && (
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold mb-3">Quick Actions</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              {quickActions.map((action) => (
+                <button
+                  key={action.name}
+                  onClick={action.onClick}
+                  className={`flex items-center p-4 rounded-lg shadow-sm bg-gradient-to-r ${action.bgColor} ${action.hoverColor} text-white transition-all duration-200 hover:shadow-md`}
+                >
+                  <div className="bg-white/20 rounded-full p-2 mr-3">
+                    {action.icon}
+                  </div>
+                  <span className="font-medium">{action.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="bg-white rounded-lg shadow p-6">
           {activeSection === "Dashboard" && <DashboardSection />}
           {activeSection === "Members" && <MembersSection />}

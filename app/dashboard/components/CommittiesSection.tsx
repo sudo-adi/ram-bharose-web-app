@@ -314,6 +314,7 @@ export default function CommittiesSection() {
           refetchCommittees();
           refetchImages();
         }}
+        onAddMember={handleAddMember} // Add this line
       />
 
       {/* Committee Form Component */}

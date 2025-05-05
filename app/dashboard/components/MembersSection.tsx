@@ -1,34 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Trash2,
-  Plus,
-  Edit,
-  Eye,
-  ChevronUp,
-  ChevronDown,
-  ChevronsUpDown,
-  MoreHorizontal,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -47,19 +19,38 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { useProfiles } from "@/hooks/useSupabase";
 
-export interface Member {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  joinDate: string;
-}
+// Import sub-components
+import { MembersTable } from "./sub-components/members-components/MembersTable";
+import { MembersSearchBar } from "./sub-components/members-components/MembersSearchBar";
+import { MembersFilter } from "./sub-components/members-components/MembersFilter";
+import { MembersPagination } from "./sub-components/members-components/MembersPagination";
+import {
+  Member,
+  SortDirection,
+  SortField,
+  FilterOption,
+} from "./sub-components/members-components/types";
+import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 
-type SortDirection = "asc" | "desc" | null;
-type SortField = keyof Member | null;
+// Import the new AddMemberForm component
+import { AddMemberForm } from "./sub-components/members-components/AddMemberForm";
 
 export function MembersSection() {
   // Pagination state
@@ -70,17 +61,107 @@ export function MembersSection() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
-  // Fetch profiles from Supabase with pagination and search
+  // Filter state
+  const [showFilters, setShowFilters] = useState(false);
+  const [activeFilters, setActiveFilters] = useState<Record<string, any>>({});
+  const [filterCount, setFilterCount] = useState(0);
+
+  // Define available filters
+  const filterOptions: FilterOption[] = [
+    {
+      id: "gender",
+      label: "Gender",
+      type: "select",
+      field: "gender",
+      options: [
+        { value: "Male", label: "Male" },
+        { value: "Female", label: "Female" },
+        { value: "Other", label: "Other" },
+      ],
+    },
+    {
+      id: "marital_status",
+      label: "Marital Status",
+      type: "select",
+      field: "marital_status",
+      options: [
+        { value: "Unmarried", label: "Single" },
+        { value: "Married", label: "Married" },
+        { value: "Divorcee", label: "Divorced" },
+        { value: "Widow", label: "Widowed" },
+      ],
+    },
+    {
+      id: "blood_group",
+      label: "Blood Group",
+      type: "select",
+      field: "blood_group",
+      options: [
+        { value: "A+", label: "A+" },
+        { value: "A-", label: "A-" },
+        { value: "B+", label: "B+" },
+        { value: "B-", label: "B-" },
+        { value: "AB+", label: "AB+" },
+        { value: "AB-", label: "AB-" },
+        { value: "O+", label: "O+" },
+        { value: "O-", label: "O-" },
+      ],
+    },
+    {
+      id: "city",
+      label: "City",
+      type: "text",
+      field: "city",
+    },
+    {
+      id: "state",
+      label: "State",
+      type: "text",
+      field: "state",
+    },
+    {
+      id: "date_of_birth",
+      label: "Date of Birth",
+      type: "date",
+      field: "date_of_birth",
+    },
+  ];
+
+  // Fetch profiles from Supabase with pagination, search and filters
   const {
     data: profilesResult,
     loading,
     error,
     refetch,
-  } = useProfiles(currentPage, pageSize, debouncedSearch);
+  } = useProfiles(currentPage, pageSize, debouncedSearch, activeFilters);
 
   // State for members data
   const [members, setMembers] = useState<Member[]>([]);
   const [totalCount, setTotalCount] = useState(0);
+
+  // Form data state
+  const [formData, setFormData] = useState({
+    name: "",
+    surname: "",
+    email: "",
+    mobile_no1: "",
+    gender: "",
+    date_of_birth: "",
+    marital_status: "",
+    blood_group: "",
+    residential_address_city: "",
+    residential_address_state: "",
+  });
+
+  // Selection and sorting state
+  const [selected, setSelected] = useState<string[]>([]);
+  const [sortField, setSortField] = useState<SortField>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+  const [openDialog, setOpenDialog] = useState<"view" | "edit" | "add" | null>(
+    null
+  );
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [currentMember, setCurrentMember] = useState<Member | null>(null);
 
   // Debounce search input
   useEffect(() => {
@@ -90,6 +171,11 @@ export function MembersSection() {
 
     return () => clearTimeout(timer);
   }, [search]);
+
+  // Update filter count
+  useEffect(() => {
+    setFilterCount(Object.keys(activeFilters).length);
+  }, [activeFilters]);
 
   // Convert profiles to members format when data is loaded
   useEffect(() => {
@@ -107,14 +193,66 @@ export function MembersSection() {
     }
   }, [profilesResult]);
 
-  const [selected, setSelected] = useState<string[]>([]);
-  const [sortField, setSortField] = useState<SortField>(null);
-  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
-  const [openDialog, setOpenDialog] = useState<"view" | "edit" | "add" | null>(
-    null
-  );
-  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
-  const [currentMember, setCurrentMember] = useState<Member | null>(null);
+  // Handle form input changes
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // Handle select changes
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // Handle date changes
+  const handleDateChange = (date: Date | undefined) => {
+    if (date) {
+      setFormData((prev) => ({
+        ...prev,
+        date_of_birth: date.toISOString().split("T")[0], // Format as YYYY-MM-DD
+      }));
+    }
+  };
+
+  // Apply a filter
+  const applyFilter = (filterId: string, value: any) => {
+    setActiveFilters((prev) => {
+      const newFilters = { ...prev };
+
+      if (
+        value === undefined ||
+        value === null ||
+        value === "" ||
+        value === "all"
+      ) {
+        // Remove the filter if value is empty or 'all'
+        delete newFilters[filterId];
+      } else {
+        // Add or update the filter
+        newFilters[filterId] = value;
+      }
+
+      return newFilters;
+    });
+
+    // Reset to first page when filters change
+    setCurrentPage(1);
+  };
+
+  // Clear all filters
+  const clearAllFilters = () => {
+    setActiveFilters({});
+    setCurrentPage(1);
+  };
+
+  // Clear a specific filter
+  const clearFilter = (filterId: string) => {
+    setActiveFilters((prev) => {
+      const newFilters = { ...prev };
+      delete newFilters[filterId];
+      return newFilters;
+    });
+  };
 
   // Sorting function
   const handleSort = (field: keyof Member) => {
@@ -200,6 +338,31 @@ export function MembersSection() {
     setCurrentPage(newPage);
   };
 
+  // View, edit, and delete handlers
+  const handleViewMember = (member: Member) => {
+    setCurrentMember(member);
+    setOpenDialog("view");
+  };
+
+  const handleEditMember = (member: Member) => {
+    setCurrentMember(member);
+    setOpenDialog("edit");
+  };
+
+  const handleDeleteMember = (id: string) => {
+    const member = members.find((m) => m.id === id);
+    if (member) {
+      setCurrentMember(member);
+      setOpenDeleteDialog(true);
+    }
+  };
+
+  // Open add dialog
+  const openAddDialog = () => {
+    setCurrentMember(null);
+    setOpenDialog("add");
+  };
+
   // Show loading state
   if (loading) {
     return <div className="p-4 text-center">Loading members data...</div>;
@@ -219,179 +382,49 @@ export function MembersSection() {
 
   return (
     <div className="space-y-4">
-      {/* Search Bar */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <Input
-          placeholder="Search members..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="max-w-sm"
-        />
-        <div className="flex items-center gap-2">
-          {selected.length > 0 && (
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => setOpenDeleteDialog(true)}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete ({selected.length})
-            </Button>
-          )}
-          <Button
-            size="sm"
-            onClick={() => {
-              setCurrentMember(null);
-              setOpenDialog("add");
-            }}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Add Member
-          </Button>
-        </div>
-      </div>
+      {/* Search and Filter Bar */}
+      <MembersSearchBar
+        search={search}
+        setSearch={setSearch}
+        selected={selected}
+        openDeleteDialog={() => setOpenDeleteDialog(true)}
+        openAddDialog={openAddDialog}
+      />
+
+      {/* Filters */}
+      <MembersFilter
+        showFilters={showFilters}
+        setShowFilters={setShowFilters}
+        filterCount={filterCount}
+        activeFilters={activeFilters}
+        filterOptions={filterOptions}
+        applyFilter={applyFilter}
+        clearAllFilters={clearAllFilters}
+        clearFilter={clearFilter}
+      />
 
       {/* Members Table */}
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[40px]">
-                <Checkbox
-                  checked={
-                    selected.length > 0 && selected.length === members.length
-                  }
-                  onCheckedChange={toggleSelectAll}
-                />
-              </TableHead>
-              <TableHead
-                className="cursor-pointer hover:bg-accent"
-                onClick={() => handleSort("name")}
-              >
-                <div className="flex items-center">
-                  Name
-                  {getSortIcon("name")}
-                </div>
-              </TableHead>
-              <TableHead
-                className="cursor-pointer hover:bg-accent"
-                onClick={() => handleSort("email")}
-              >
-                <div className="flex items-center">
-                  Email
-                  {getSortIcon("email")}
-                </div>
-              </TableHead>
-              <TableHead
-                className="cursor-pointer hover:bg-accent"
-                onClick={() => handleSort("phone")}
-              >
-                <div className="flex items-center">
-                  Phone
-                  {getSortIcon("phone")}
-                </div>
-              </TableHead>
-              <TableHead
-                className="cursor-pointer hover:bg-accent"
-                onClick={() => handleSort("joinDate")}
-              >
-                <div className="flex items-center">
-                  Join Date
-                  {getSortIcon("joinDate")}
-                </div>
-              </TableHead>
-              <TableHead className="w-[50px]">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sortedMembers.length > 0 ? (
-              sortedMembers.map((member) => (
-                <TableRow key={member.id}>
-                  <TableCell>
-                    <Checkbox
-                      checked={selected.includes(member.id)}
-                      onCheckedChange={() => toggleSelect(member.id)}
-                    />
-                  </TableCell>
-                  <TableCell className="font-medium">{member.name}</TableCell>
-                  <TableCell>{member.email}</TableCell>
-                  <TableCell>{member.phone}</TableCell>
-                  <TableCell>{member.joinDate}</TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() => {
-                            setCurrentMember(member);
-                            setOpenDialog("view");
-                          }}
-                        >
-                          <Eye className="mr-2 h-4 w-4" />
-                          View
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => {
-                            setCurrentMember(member);
-                            setOpenDialog("edit");
-                          }}
-                        >
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="text-red-600"
-                          onClick={() => {
-                            setCurrentMember(member);
-                            setOpenDeleteDialog(true);
-                          }}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
-                  No members found.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <MembersTable
+        members={sortedMembers}
+        selected={selected}
+        sortField={sortField}
+        sortDirection={sortDirection}
+        toggleSelectAll={toggleSelectAll}
+        toggleSelect={toggleSelect}
+        handleSort={handleSort}
+        getSortIcon={getSortIcon}
+        onView={handleViewMember}
+        onEdit={handleEditMember}
+        onDelete={handleDeleteMember}
+      />
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-center space-x-2 py-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handlePageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <span className="text-sm">
-            Page {currentPage} of {totalPages}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handlePageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
+        <MembersPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          handlePageChange={handlePageChange}
+        />
       )}
 
       {/* View Member Dialog */}
@@ -447,19 +480,31 @@ export function MembersSection() {
         </DialogContent>
       </Dialog>
 
-      {/* Add/Edit Member Dialog */}
+      {/* Add/Edit Member Dialog - Now using our componentized AddMemberForm */}
       <Dialog
         open={openDialog === "edit" || openDialog === "add"}
         onOpenChange={(open) => {
           if (!open) setOpenDialog(null);
         }}
       >
-        <DialogContent>
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>
               {currentMember ? "Edit Member" : "Add New Member"}
             </DialogTitle>
+            <DialogDescription>
+              {currentMember
+                ? "Update the member details below."
+                : "Fill in the details to add a new member."}
+            </DialogDescription>
           </DialogHeader>
+          
+          {/* Use our new AddMemberForm component */}
+          <AddMemberForm 
+            currentMember={currentMember}
+            onSave={saveMember}
+            onCancel={() => setOpenDialog(null)}
+          />
         </DialogContent>
       </Dialog>
 

@@ -10,9 +10,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Edit, Trash2, Phone, MessageSquare, UserMinus } from "lucide-react";
+import {
+  Edit,
+  Trash2,
+  UserMinus,
+  Plus,
+  Video,
+  MessageSquare,
+} from "lucide-react";
 import { CommitteeWithMembers } from "./types";
 
+// Update the props type
 type CommitteeDialogProps = {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
@@ -22,7 +30,24 @@ type CommitteeDialogProps = {
     committeeId: number
   ) => Promise<{ success: boolean; error: Error | null }>;
   onRefresh: () => void;
+  onAddMember?: (committee: CommitteeWithMembers) => void; // Add this prop
 };
+
+/* Example of how to use the onAddMember prop:
+<Button
+  className="bg-green-500 hover:bg-green-600 text-white flex items-center gap-2"
+  onClick={() => {
+    setIsOpen(false);
+    // Use the onAddMember prop if provided
+    if (committee && props.onAddMember) {
+      props.onAddMember(committee);
+    }
+  }}
+>
+  <Plus className="h-4 w-4" />
+  <span>Add Member</span>
+</Button>
+*/
 
 export function CommitteeDialog({
   isOpen,
@@ -31,12 +56,13 @@ export function CommitteeDialog({
   onEditCommittee,
   onDeleteCommittee,
   onRefresh,
+  onAddMember, // This prop is already defined but not being used
 }: CommitteeDialogProps) {
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   const handleCall = (phoneNumber: string) => {
-    window.open(`tel:${phoneNumber}`);
+    window.open(`facetime:${phoneNumber}`);
   };
 
   const handleWhatsApp = (phoneNumber: string) => {
@@ -172,7 +198,7 @@ export function CommitteeDialog({
                   className="h-8 w-8 p-0 text-blue-500 hover:bg-blue-50 hover:text-blue-600"
                   onClick={() => handleCall(member.phone)}
                 >
-                  <Phone className="h-4 w-4" />
+                  <Video className="h-4 w-4" />
                 </Button>
                 <Button
                   size="sm"
@@ -196,6 +222,23 @@ export function CommitteeDialog({
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Add Member Button */}
+        <div className="mt-4 flex justify-center w-full">
+          <Button
+            className="bg-green-500 hover:bg-green-600 text-white flex w-full items-center gap-2"
+            onClick={() => {
+              setIsOpen(false);
+              // Use the onAddMember prop directly instead of the custom event
+              if (committee && onAddMember) {
+                onAddMember(committee);
+              }
+            }}
+          >
+            <Plus className="h-4 w-4" />
+            <span>Add Member</span>
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
