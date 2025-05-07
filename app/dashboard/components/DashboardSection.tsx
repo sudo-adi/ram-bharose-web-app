@@ -14,7 +14,11 @@ import { RecentApplications } from "./sub-components/dashboard-components/Recent
 import { GenderDistribution } from "./sub-components/dashboard-components/GenderDistribution";
 import { BirthdayList } from "./sub-components/dashboard-components/BirthdayList";
 
-export function DashboardSection() {
+type DashboardSectionProps = {
+  setActiveSection: (section: string) => void;
+};
+
+export function DashboardSection({ setActiveSection }: DashboardSectionProps) {
   // State for dashboard data
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -159,6 +163,11 @@ export function DashboardSection() {
 
   const handleRefresh = () => {
     fetchDashboardStats();
+  };
+
+  // Handler to navigate to Applications section
+  const handleViewAllApplications = () => {
+    setActiveSection("Applications");
   };
 
   if (loading && !stats.totalMembers) {
@@ -321,7 +330,10 @@ export function DashboardSection() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <RecentApplications applications={recentApplications} />
+            <RecentApplications
+              applications={recentApplications}
+              onViewAll={handleViewAllApplications}
+            />
           </CardContent>
         </Card>
       </div>

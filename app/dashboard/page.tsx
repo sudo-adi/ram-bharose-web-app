@@ -192,7 +192,7 @@ export default function Dashboard() {
         )}
 
         <div className="bg-white rounded-lg shadow p-6">
-          {activeSection === "Dashboard" && <DashboardSection />}
+          {activeSection === "Dashboard" && <DashboardSection setActiveSection={setActiveSection} />}
           {activeSection === "Members" && <MembersSection />}
           {activeSection === "Families" && <FamiliesSection />}
           {activeSection === "Doctors" && <DoctorsSection />}

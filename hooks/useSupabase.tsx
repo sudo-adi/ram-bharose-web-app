@@ -846,12 +846,12 @@ export const useBusiness = () => {
           const logoUrl =
             logoData && logoData.length > 0
               ? (
-                  await supabase.storage
-                    .from("businesses")
-                    .getPublicUrl(
-                      `${business.user_id}/logo/${logoData[0].name}`
-                    )
-                ).data.publicUrl
+                supabase.storage
+                  .from("businesses")
+                  .getPublicUrl(
+                    `${business.user_id}/logo/${logoData[0].name}`
+                  )
+              ).data.publicUrl
               : null;
 
           // Get business images
@@ -863,7 +863,7 @@ export const useBusiness = () => {
             (imagesData || []).map(async (image) => {
               const {
                 data: { publicUrl },
-              } = await supabase.storage
+              } = supabase.storage
                 .from("businesses")
                 .getPublicUrl(`${business.user_id}/images/${image.name}`);
               return publicUrl;
@@ -986,34 +986,55 @@ export const useShubhChintak = (limit?: number) => {
 
 // Add this type definition before the useFamilies hook
 type Family = {
-  id: string; // family_no
+  id: number; // family_no
   name: string; // surname + family name
   headName: string; // head of family name
   headImage: string; // head profile pic
   coverImage: string; // family cover pic
   address: string; // residential address
-  city: string; // city
-  state: string; // state
+  city: string; // residential address city
+  state: string; // residential address state
+  pinCode: string; // pin code
   totalMembers: number; // count of members
   members: FamilyMember[]; // array of family members
 };
 
 // You'll also need to add the FamilyMember type
 type FamilyMember = {
-  id: number;
-  name: string;
+  uuid: string;
+  family_no: number;
   surname: string;
-  relationship: string;
+  name: string;
+  fathers_or_husbands_name: string;
+  father_in_laws_name: string;
   gender: string;
+  relationship: string;
+  marital_status: string;
+  marriage_date: string;
   date_of_birth: string;
+  education: string;
+  stream: string;
+  qualification: string;
   occupation: string;
   email: string;
   profile_pic: string;
+  family_cover_pic: string;
   blood_group: string;
+  native_place: string;
+  residential_address_line1: string;
+  residential_address_state: string;
+  residential_address_city: string;
+  pin_code: string;
+  residential_landline: string;
+  office_address: string;
+  office_address_state: string;
+  office_address_city: string;
+  office_address_pin: string;
+  landline_office: string;
   mobile_no1: string;
   mobile_no2: string;
-  education: string;
-  qualification: string;
+  date_of_demise: string;
+  updated_at: string;
 };
 
 // New hook for fetching distinct family numbers and their members
@@ -1052,7 +1073,7 @@ export const useNews = () => {
 
       const articlesWithImages = await Promise.all(
         articlesWithUserNames.map(async (article) => {
-          const { data: imageData } = await supabase.storage
+          const { data: imageData } = supabase.storage
             .from("articles")
             .getPublicUrl(article.user_id);
 
@@ -1101,26 +1122,25 @@ export const useFamilies = (page = 1, pageSize = 12, searchQuery = "") => {
 
       // Step 1: First fetch distinct family numbers with pagination
       const from = (page - 1) * pageSize;
-      const to = from + pageSize - 1;
+      const to = from + pageSize - 1; // Changed to be inclusive upper bound
 
       // Query to get distinct family numbers
       let familyQuery = supabase
         .from("profiles")
-        .select("family_no", { count: "exact" })
+        .select("family_no,count()", { count: "exact" })
         .not("family_no", "is", null)
-        .order("family_no")
+        .order("family_no", { ascending: true })
+
         .range(from, to);
 
       // Add search filter if provided
       if (searchQuery) {
-        // We'll need to join with the full profiles to search by name/surname
-        // This is a simplified approach - in a real app, you might need a more complex query
         familyQuery = supabase
           .from("profiles")
-          .select("family_no", { count: "exact" })
+          .select("family_no,count()", { count: "exact" })
           .not("family_no", "is", null)
           .or(`name.ilike.%${searchQuery}%,surname.ilike.%${searchQuery}%`)
-          .order("family_no")
+          .order("family_no", { ascending: true })
           .range(from, to);
       }
 
@@ -1172,23 +1192,43 @@ export const useFamilies = (page = 1, pageSize = 12, searchQuery = "") => {
             members[0];
 
           // Create family members list
-          const membersList = members.map((member) => ({
-            id: member.id,
-            name: member.name,
+          const membersList: FamilyMember[] = members.map((member) => ({
+            uuid: member.id.toString(),
+            family_no: member.family_no || 0,
             surname: member.surname || "",
-            relationship: member.relationship || "",
+            name: member.name || "",
+            fathers_or_husbands_name: member.fathers_or_husbands_name || "",
+            father_in_laws_name: member.father_in_laws_name || "",
             gender: member.gender || "",
+            relationship: member.relationship || "",
+            marital_status: member.marital_status || "",
+            marriage_date: member.marriage_date || "",
             date_of_birth: member.date_of_birth || "",
+            education: member.education || "",
+            stream: member.stream || "",
+            qualification: member.qualification || "",
             occupation: member.occupation || "",
             email: member.email || "",
             profile_pic:
               member.profile_pic ||
               "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?q=80&w=300",
+            family_cover_pic: member.family_cover_pic || "",
             blood_group: member.blood_group || "",
+            native_place: member.native_place || "",
+            residential_address_line1: member.residential_address_line1 || "",
+            residential_address_state: member.residential_address_state || "",
+            residential_address_city: member.residential_address_city || "",
+            pin_code: member.pin_code || "",
+            residential_landline: member.residential_landline || "",
+            office_address: member.office_address || "",
+            office_address_state: member.office_address_state || "",
+            office_address_city: member.office_address_city || "",
+            office_address_pin: member.office_address_pin || "",
+            landline_office: member.landline_office || "",
             mobile_no1: member.mobile_no1 || "",
             mobile_no2: member.mobile_no2 || "",
-            education: member.education || "",
-            qualification: member.qualification || "",
+            date_of_demise: member.date_of_demise || "",
+            updated_at: member.updated_at || "",
           }));
 
           return {
@@ -1211,7 +1251,10 @@ export const useFamilies = (page = 1, pageSize = 12, searchQuery = "") => {
 
       setResult({
         data: {
-          families: processedFamilies,
+          families: processedFamilies.map((family) => ({
+            ...family,
+            pinCode: family.members[0]?.pin_code || "", // Add pinCode from the first member
+          })),
           count: count || 0,
         },
         error: null,

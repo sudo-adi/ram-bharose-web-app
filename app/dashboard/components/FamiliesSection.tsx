@@ -32,15 +32,31 @@ export function FamiliesSection() {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedFamily, setSelectedFamily] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 12; // 12 distinct families per page
+  const pageSize = 12;
 
+  // Add debouncing effect for search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300); // 300ms delay
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Use debounced search query for the API call
   const {
     data: familiesData,
     loading: familiesLoading,
     error: familiesError,
     refetch: refetchFamilies,
-  } = useFamilies(currentPage, pageSize, searchQuery);
+  } = useFamilies(currentPage, pageSize, debouncedSearchQuery);
+
+  // Reset to first page when search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchQuery]);
 
   const handleFamilyPress = (family: any) => {
     setSelectedFamily(family);
@@ -163,10 +179,12 @@ export function FamiliesSection() {
         </div>
 
         {/* Families Grid - Shows 12 distinct families */}
+
         {families.length > 0 ? (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {families.map((family: any) => (
+
                 <div
                   key={family.id}
                   className="bg-white rounded-lg overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col"
@@ -183,8 +201,8 @@ export function FamiliesSection() {
                           "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?q=80&w=2000";
                       }}
                     />
-                    <div className="absolute -bottom-8 left-4">
-                      <div className="relative h-16 w-16 rounded-full overflow-hidden border-2 border-white z-10">
+                    <div className="absolute -bottom-8 left-4 z-20">
+                      <div className="relative h-16 w-16 rounded-full overflow-hidden border-2 border-white">
                         <Image
                           src={family.headImage}
                           alt={family.headName}
@@ -228,17 +246,16 @@ export function FamiliesSection() {
             </div>
 
             {/* Pagination */}
-            {totalPages > 1 && (
+            {totalPages >= 1 && (
               <div className="flex justify-center mt-8">
                 <nav className="flex items-center gap-1">
                   <button
                     onClick={() => handlePageChange(currentPage - 1)}
                     disabled={currentPage === 1}
-                    className={`p-2 rounded-md ${
-                      currentPage === 1
-                        ? "text-gray-400 cursor-not-allowed"
-                        : "text-gray-700 hover:bg-gray-100"
-                    }`}
+                    className={`p-2 rounded-md ${currentPage === 1
+                      ? "text-gray-400 cursor-not-allowed"
+                      : "text-gray-700 hover:bg-gray-100"
+                      }`}
                   >
                     <span className="sr-only">Previous</span>
                     <svg
@@ -287,11 +304,10 @@ export function FamiliesSection() {
                         <button
                           key={page}
                           onClick={() => handlePageChange(page)}
-                          className={`px-3 py-1 rounded-md ${
-                            page === currentPage
-                              ? "bg-orange-500 text-white"
-                              : "text-gray-700 hover:bg-gray-100"
-                          }`}
+                          className={`px-3 py-1 rounded-md ${page === currentPage
+                            ? "bg-orange-500 text-white"
+                            : "text-gray-700 hover:bg-gray-100"
+                            }`}
                         >
                           {page}
                         </button>
@@ -302,11 +318,10 @@ export function FamiliesSection() {
                   <button
                     onClick={() => handlePageChange(currentPage + 1)}
                     disabled={currentPage >= totalPages}
-                    className={`p-2 rounded-md ${
-                      currentPage >= totalPages
-                        ? "text-gray-400 cursor-not-allowed"
-                        : "text-gray-700 hover:bg-gray-100"
-                    }`}
+                    className={`p-2 rounded-md ${currentPage >= totalPages
+                      ? "text-gray-400 cursor-not-allowed"
+                      : "text-gray-700 hover:bg-gray-100"
+                      }`}
                   >
                     <span className="sr-only">Next</span>
                     <svg
@@ -405,7 +420,7 @@ export function FamiliesSection() {
                 </h3>
                 {selectedFamily.members.map((member: any) => (
                   <div
-                    key={member.id}
+                    key={member.uuid}
                     className="flex items-start p-3 rounded-lg border border-gray-100"
                   >
                     <div className="relative h-12 w-12 rounded-full overflow-hidden mr-3 flex-shrink-0">

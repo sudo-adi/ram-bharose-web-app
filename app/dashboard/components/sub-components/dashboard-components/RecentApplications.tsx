@@ -1,5 +1,6 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 type Application = {
   id: number;
@@ -12,9 +13,10 @@ type Application = {
 
 type RecentApplicationsProps = {
   applications: Application[];
+  onViewAll?: () => void; // Add this prop to handle changing the section
 };
 
-export function RecentApplications({ applications }: RecentApplicationsProps) {
+export function RecentApplications({ applications, onViewAll }: RecentApplicationsProps) {
   // Format date
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -79,12 +81,13 @@ export function RecentApplications({ applications }: RecentApplicationsProps) {
 
       {applications.length > 0 && (
         <div className="pt-2 text-center">
-          <a
-            href="#"
+          <Button
+            variant="link"
             className="text-xs text-orange-600 hover:text-orange-800 font-medium"
+            onClick={onViewAll}
           >
             View all applications
-          </a>
+          </Button>
         </div>
       )}
     </div>
