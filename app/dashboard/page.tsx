@@ -32,6 +32,7 @@ import CommittiesSection from "./components/CommittiesSection";
 import ApplicationsSection from "./components/ApplicationsSection";
 import NariSahasSection from "./components/NariSahasSection";
 import NewsSection from "./components/NewsSection";
+import Image from "next/image";
 
 // Remove the section components from this file and keep the rest of the code
 export default function Dashboard() {
@@ -104,9 +105,12 @@ export default function Dashboard() {
           <SheetContent side="left" className="w-[280px] p-4">
             <div className="space-y-4 py-4">
               <div className="px-3 py-2">
-                <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">
-                  Organization Dashboard
-                </h2>
+                <div className="mb-2 px-4 flex items-center gap-2">
+                  <Image src="/icon.png" alt="KMS Logo" className="h-6 w-6" />
+                  <h2 className="text-lg font-semibold tracking-tight">
+                    KMS DASHBOARD
+                  </h2>
+                </div>
                 <div className="space-y-1">
                   {sections.map((section) => (
                     <Button
@@ -133,9 +137,12 @@ export default function Dashboard() {
         <div className="flex-1 overflow-y-auto">
           <div className="space-y-4 py-4">
             <div className="px-3 py-2">
-              <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">
-                Organization Dashboard
-              </h2>
+              <div className="mb-2 px-4 flex items-center gap-2">
+                <Image src="/icon.png" alt="KMS Logo" width={44} height={44} />
+                <h2 className="text-lg font-semibold tracking-tight">
+                  KMS DASHBOARD
+                </h2>
+              </div>
               <div className="space-y-1">
                 {sections.map((section) => (
                   <Button
@@ -192,7 +199,9 @@ export default function Dashboard() {
         )}
 
         <div className="bg-white rounded-lg shadow p-6">
-          {activeSection === "Dashboard" && <DashboardSection setActiveSection={setActiveSection} />}
+          {activeSection === "Dashboard" && (
+            <DashboardSection setActiveSection={setActiveSection} />
+          )}
           {activeSection === "Members" && <MembersSection />}
           {activeSection === "Families" && <FamiliesSection />}
           {activeSection === "Doctors" && <DoctorsSection />}
