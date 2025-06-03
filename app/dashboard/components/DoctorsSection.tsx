@@ -26,6 +26,7 @@ import {
   X,
   Eye,
   Edit,
+  Plus,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -38,6 +39,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { supabase } from "@/lib/supabase";
 
 type Doctor = {
   id: number;
@@ -64,6 +66,7 @@ export function DoctorsSection() {
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isAddMode, setIsAddMode] = useState(false);
   const [activeSpecialization, setActiveSpecialization] = useState("All");
 
   // Add form state for editing
@@ -84,6 +87,7 @@ export function DoctorsSection() {
     loading,
     error,
     updateDoctor,
+    refetch,
   } = useDoctors(currentPage, pageSize, debouncedSearch);
 
   // Debounce search input
@@ -107,12 +111,12 @@ export function DoctorsSection() {
   // Filter doctors based on selected specialization (client-side filtering)
   const filteredDoctors = doctorsData?.data
     ? doctorsData.data.filter((doctor) => {
-        const matchesSpecialization =
-          activeSpecialization === "All" ||
-          doctor.specialization === activeSpecialization;
+      const matchesSpecialization =
+        activeSpecialization === "All" ||
+        doctor.specialization === activeSpecialization;
 
-        return matchesSpecialization;
-      })
+      return matchesSpecialization;
+    })
     : [];
 
   // Calculate total pages
@@ -165,6 +169,56 @@ export function DoctorsSection() {
     }
   };
 
+  const handleOpenAddDialog = () => {
+    // Reset the form data to empty values
+    setEditForm({
+      name: "",
+      specialization: "",
+      qualification: "",
+      experience_years: 0,
+      clinic_address: "",
+      contact_email: "",
+      contact_phone: "",
+      available_timings: "",
+    });
+    setSelectedDoctor(null);
+    setIsAddMode(true);
+    setIsEditMode(false);
+    setModalOpen(true);
+  };
+
+  const handleAddDoctor = async () => {
+    // Validate required fields
+    if (!editForm.name || !editForm.specialization || !editForm.qualification) {
+      // Show validation error
+      return;
+    }
+
+    try {
+
+      const { error } = await supabase.from("doctors").insert({
+        name: editForm.name,
+        specialization: editForm.specialization,
+        qualification: editForm.qualification,
+        experience_years: editForm.experience_years || 0,
+        clinic_address: editForm.clinic_address || "",
+        contact_email: editForm.contact_email || "",
+        contact_phone: editForm.contact_phone || "",
+        available_timings: editForm.available_timings || "",
+      });
+      if (!error) {
+        setModalOpen(false);
+        setIsAddMode(false);
+        // Refetch the doctors list
+        refetch();
+      } else {
+        console.error("Error adding doctor");
+      }
+    } catch (error) {
+      console.error("Error adding doctor:", error);
+    }
+  };
+
   const handleEmail = (email: string) => {
     window.open(`mailto:${email}`, "_blank");
   };
@@ -203,22 +257,29 @@ export function DoctorsSection() {
     <div className="space-y-6">
       {/* Search and Filters */}
       <div className="space-y-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-          <Input
-            placeholder="Search by name or specialization..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 pr-10"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2"
-            >
-              <X className="h-4 w-4 text-gray-500" />
-            </button>
-          )}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+            <Input
+              placeholder="Search by name or specialization..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 pr-10"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2"
+              >
+                <X className="h-4 w-4 text-gray-500" />
+              </button>
+            )}
+          </div>
+
+          <Button size="sm" onClick={handleOpenAddDialog}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Doctor
+          </Button>
         </div>
 
         <ScrollArea className="whitespace-nowrap pb-2">
@@ -420,19 +481,21 @@ export function DoctorsSection() {
       {/* Doctor Detail Dialog */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="sm:max-w-md">
-          {selectedDoctor && (
+          {(selectedDoctor || isAddMode) && (
             <>
               <DialogHeader>
                 <div className="flex flex-col items-center mb-4">
-                  <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mb-3">
-                    <span className="text-orange-500 text-xl font-bold">
-                      {selectedDoctor.name.charAt(0)}
-                    </span>
-                  </div>
+                  {!isAddMode && selectedDoctor && !isEditMode && (
+                    <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mb-3">
+                      <span className="text-orange-500 text-xl font-bold">
+                        {selectedDoctor.name.charAt(0)}
+                      </span>
+                    </div>
+                  )}
                   <DialogTitle className="text-center">
-                    {isEditMode ? "Edit Doctor" : selectedDoctor.name}
+                    {isAddMode ? "Add New Doctor" : isEditMode ? "Edit Doctor" : selectedDoctor!.name}
                   </DialogTitle>
-                  {!isEditMode && (
+                  {!isEditMode && !isAddMode && selectedDoctor && (
                     <>
                       <p className="text-orange-500 text-sm">
                         {selectedDoctor.specialization}
@@ -445,7 +508,7 @@ export function DoctorsSection() {
                 </div>
               </DialogHeader>
 
-              {!isEditMode ? (
+              {!isEditMode && !isAddMode && selectedDoctor ? (
                 <>
                   <div className="flex justify-center space-x-6 mb-6">
                     <Button
@@ -535,7 +598,7 @@ export function DoctorsSection() {
                 </>
               ) : (
                 <>
-                  {/* Edit form */}
+                  {/* Edit/Add form */}
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <label htmlFor="name" className="text-sm font-medium">
@@ -659,15 +722,18 @@ export function DoctorsSection() {
                   <DialogFooter>
                     <Button
                       variant="outline"
-                      onClick={() => setIsEditMode(false)}
+                      onClick={() => {
+                        setIsEditMode(false);
+                        setIsAddMode(false);
+                      }}
                     >
                       Cancel
                     </Button>
                     <Button
                       className="bg-orange-500 hover:bg-orange-600"
-                      onClick={handleSaveChanges}
+                      onClick={isAddMode ? handleAddDoctor : handleSaveChanges}
                     >
-                      Save Changes
+                      {isAddMode ? "Add Doctor" : "Save Changes"}
                     </Button>
                   </DialogFooter>
                 </>
