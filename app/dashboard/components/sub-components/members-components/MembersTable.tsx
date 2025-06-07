@@ -89,20 +89,20 @@ export function MembersTable({
             </TableHead>
             <TableHead
               className="cursor-pointer"
-              onClick={() => handleSort("phone")}
+              onClick={() => handleSort("mobile_no1")}
             >
               <div className="flex items-center">
                 Phone
-                {getSortIcon("phone")}
+                {getSortIcon("mobile_no1")}
               </div>
             </TableHead>
             <TableHead
               className="cursor-pointer"
-              onClick={() => handleSort("joinDate")}
+              onClick={() => handleSort("updated_at")}
             >
               <div className="flex items-center">
                 Join Date
-                {getSortIcon("joinDate")}
+                {getSortIcon("updated_at")}
               </div>
             </TableHead>
             <TableHead className="w-12">Actions</TableHead>
@@ -130,8 +130,8 @@ export function MembersTable({
                 </TableCell>
                 <TableCell>{member.name}</TableCell>
                 <TableCell>{member.email}</TableCell>
-                <TableCell>{member.phone}</TableCell>
-                <TableCell>{member.joinDate}</TableCell>
+                <TableCell>{member.mobile_no1}</TableCell>
+                <TableCell>{member.updated_at}</TableCell>
                 <TableCell>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>

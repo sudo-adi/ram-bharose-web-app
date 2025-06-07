@@ -1,5 +1,103 @@
 import { supabase } from "@/lib/supabase";
 import { useState, useEffect } from "react";
+import { decode } from 'base64-arraybuffer';
+
+// Hook for member operations (add, update, delete)
+export const useMemberOperations = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const uploadProfilePicture = async (base64Data: string, fileName: string) => {
+    const decodedFile = decode(base64Data);
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('profile-pictures')
+      .upload(fileName, decodedFile, {
+        contentType: 'image/jpeg'
+      });
+
+    if (uploadError) throw uploadError;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('profile-pictures')
+      .getPublicUrl(fileName);
+
+    return publicUrl;
+  };
+
+  const saveMember = async (member: any, isUpdate = false) => {
+    setLoading(true);
+    setError(null);
+    console.log("Saving member:", member);
+    try {
+      const profileData = {
+        ...member,
+        family_no: Number(member.family_no),
+        updated_at: new Date().toISOString()
+      };
+
+      // Handle profile picture upload if it's a base64 string
+      if (member.profile_pic?.startsWith('data:image')) {
+        const base64Data = member.profile_pic.split(',')[1];
+        const fileName = `profile-${Date.now()}.jpg`;
+        profileData.profile_pic = await uploadProfilePicture(base64Data, fileName);
+      }
+
+      let result;
+      if (isUpdate && member.id) {
+        // Update existing profile
+        result = await supabase
+          .from('profiles')
+          .update(profileData)
+          .eq('id', member.id)
+          .select()
+          .single();
+      } else {
+        // Add new profile
+        const profileDataWithoutId = { ...profileData };
+        result = await supabase
+          .from('profiles')
+          .insert(profileDataWithoutId)
+          .select()
+          .single();
+      }
+
+      if (result.error) throw result.error;
+      return result.data;
+    } catch (err) {
+      setError(err as Error);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteMember = async (id: number) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    } catch (err) {
+      setError(err as Error);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return {
+    loading,
+    error,
+    saveMember,
+    deleteMember
+  };
+};
+
 // Form Types
 interface EventFormData {
   userId: string;
@@ -1307,4 +1405,72 @@ export const useAddProfile = () => {
   };
 
   return { addProfile, loading, error, success };
+};
+
+// Add this type with your other type definitions
+type Event = {
+  id: string;
+  user_id: string;
+  title: string;
+  description: string;
+  event_date: string;
+  start_time: string;
+  end_time: string;
+  location: string;
+  city: string;
+  organizer_name: string;
+  contact_email: string;
+  contact_phone: string;
+  website: string;
+  created_at: string;
+};
+
+// Add this hook with your other hooks
+export const useEvents = (page = 1, pageSize = 10, searchQuery = "") => {
+  const [result, setResult] = useState<UseQueryResult<{ data: Event[]; count: number }>>({
+    data: null,
+    error: null,
+    loading: true,
+  });
+
+  const fetchEvents = async () => {
+    try {
+      setResult(prev => ({ ...prev, loading: true }));
+
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      let query = supabase
+        .from('events')
+        .select('*', { count: 'exact' })
+        .order('event_date', { ascending: true })
+        .range(from, to);
+
+      if (searchQuery) {
+        query = query.or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
+      }
+
+      const { data, error, count } = await query;
+
+      if (error) throw error;
+
+      setResult({
+        data: { data: data || [], count: count || 0 },
+        error: null,
+        loading: false,
+      });
+    } catch (error) {
+      setResult({
+        data: null,
+        error: error as Error,
+        loading: false,
+      });
+    }
+  };
+
+  useEffect(() => {
+    fetchEvents();
+  }, [page, pageSize, searchQuery]);
+
+  return { ...result, refetch: fetchEvents };
 };

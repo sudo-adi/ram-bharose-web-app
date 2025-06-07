@@ -1,6 +1,7 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { useProfiles, useMemberOperations } from '@/hooks/useSupabase';
 import {
   Dialog,
   DialogContent,
@@ -19,22 +20,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { useProfiles } from "@/hooks/useSupabase";
 
 // Import sub-components
 import { MembersTable } from "./sub-components/members-components/MembersTable";
@@ -127,7 +112,7 @@ export function MembersSection() {
     },
   ];
 
-  // Fetch profiles from Supabase with pagination, search and filters
+  // Fetch profiles and initialize member operations
   const {
     data: profilesResult,
     loading,
@@ -135,22 +120,48 @@ export function MembersSection() {
     refetch,
   } = useProfiles(currentPage, pageSize, debouncedSearch, activeFilters);
 
+  const { saveMember: saveToSupabase, deleteMember: deleteFromSupabase, loading: memberOpLoading } = useMemberOperations();
+
   // State for members data
   const [members, setMembers] = useState<Member[]>([]);
   const [totalCount, setTotalCount] = useState(0);
 
   // Form data state
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<Member>({
+    id: "",
+    family_no: 0,
     name: "",
     surname: "",
-    email: "",
-    mobile_no1: "",
+    fathers_or_husbands_name: "",
+    father_in_laws_name: "",
     gender: "",
-    date_of_birth: "",
+    relationship: "",
     marital_status: "",
+    marriage_date: "",
+    date_of_birth: "",
+    education: "",
+    stream: "",
+    qualification: "",
+    occupation: "",
+    email: "",
+    profile_pic: "",
+    family_cover_pic: "",
     blood_group: "",
-    residential_address_city: "",
+    native_place: "",
+    residential_address_line1: "",
     residential_address_state: "",
+    residential_address_city: "",
+    pin_code: "",
+    residential_landline: "",
+    office_address: "",
+    office_address_state: "",
+    office_address_city: "",
+    office_address_pin: "",
+    landline_office: "",
+    mobile_no1: "",
+    mobile_no2: "",
+    date_of_demise: "",
+    updated_at: new Date().toISOString()
   });
 
   // Selection and sorting state
@@ -162,6 +173,14 @@ export function MembersSection() {
   );
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [currentMember, setCurrentMember] = useState<Member | null>(null);
+
+  // Add reference to form fill function
+  const [fillFormData, setFillFormData] = useState<(() => void) | null>(null);
+
+  // Handler for fill dummy data button
+  const handleFillDummyData = useCallback((fillFn: () => void) => {
+    setFillFormData(() => fillFn);
+  }, []);
 
   // Debounce search input
   useEffect(() => {
@@ -180,12 +199,42 @@ export function MembersSection() {
   // Convert profiles to members format when data is loaded
   useEffect(() => {
     if (profilesResult?.data) {
-      const formattedMembers = profilesResult.data.map((profile) => ({
+      const formattedMembers: Member[] = profilesResult.data.map((profile) => ({
         id: profile.id.toString(),
-        name: `${profile.name} ${profile.surname || ""}`.trim(),
+        family_no: typeof profile.family_no === 'number' ? profile.family_no :
+          typeof profile.family_no === 'string' ? parseInt(profile.family_no, 10) : 0,
+        name: profile.name || "",
+        surname: profile.surname || "",
+        fathers_or_husbands_name: profile.fathers_or_husbands_name || "",
+        father_in_laws_name: profile.father_in_laws_name || "",
+        gender: profile.gender || "",
+        relationship: profile.relationship || "",
+        marital_status: profile.marital_status || "",
+        marriage_date: profile.marriage_date || "",
+        date_of_birth: profile.date_of_birth || "",
+        education: profile.education || "",
+        stream: profile.stream || "",
+        qualification: profile.qualification || "",
+        occupation: profile.occupation || "",
         email: profile.email || "",
-        phone: profile.mobile_no1 || "",
-        joinDate: profile.date_of_birth || "", // You might want to use a different field for join date
+        profile_pic: profile.profile_pic || "",
+        family_cover_pic: profile.family_cover_pic || "",
+        blood_group: profile.blood_group || "",
+        native_place: profile.native_place || "",
+        residential_address_line1: profile.residential_address_line1 || "",
+        residential_address_state: profile.residential_address_state || "",
+        residential_address_city: profile.residential_address_city || "",
+        pin_code: profile.pin_code || "",
+        residential_landline: profile.residential_landline || "",
+        office_address: profile.office_address || "",
+        office_address_state: profile.office_address_state || "",
+        office_address_city: profile.office_address_city || "",
+        office_address_pin: profile.office_address_pin || "",
+        landline_office: profile.landline_office || "",
+        mobile_no1: profile.mobile_no1 || "",
+        mobile_no2: profile.mobile_no2 || "",
+        date_of_demise: profile.date_of_demise || "",
+        updated_at: new Date().toISOString()
       }));
 
       setMembers(formattedMembers);
@@ -193,26 +242,7 @@ export function MembersSection() {
     }
   }, [profilesResult]);
 
-  // Handle form input changes
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
 
-  // Handle select changes
-  const handleSelectChange = (name: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  // Handle date changes
-  const handleDateChange = (date: Date | undefined) => {
-    if (date) {
-      setFormData((prev) => ({
-        ...prev,
-        date_of_birth: date.toISOString().split("T")[0], // Format as YYYY-MM-DD
-      }));
-    }
-  };
 
   // Apply a filter
   const applyFilter = (filterId: string, value: any) => {
@@ -293,41 +323,67 @@ export function MembersSection() {
   };
 
   // Delete selected members
-  const deleteSelected = () => {
-    setMembers((prev) => prev.filter((m) => !selected.includes(m.id)));
-    setSelected([]);
-    setOpenDeleteDialog(false);
+  const deleteSelected = async () => {
+    try {
+      await Promise.all(selected.map(id => deleteFromSupabase(Number(id))));
+      setMembers((prev) => prev.filter((m) => !selected.includes(m.id)));
+      setSelected([]);
+      setOpenDeleteDialog(false);
+      alert('Selected members deleted successfully');
+      refetch();
+    } catch (err) {
+      console.error('Error deleting members:', err);
+      alert('Failed to delete some or all members. Please try again.');
+    }
   };
 
   // Delete single member
-  const deleteMember = (id: string) => {
-    setMembers((prev) => prev.filter((m) => m.id !== id));
-    setOpenDeleteDialog(false);
-  };
-
-  // Save member (add or edit)
-  const saveMember = (member: Member) => {
-    if (currentMember) {
-      // Edit existing
-      setMembers((prev) => prev.map((m) => (m.id === member.id ? member : m)));
-    } else {
-      // Add new
-      setMembers((prev) => [...prev, { ...member, id: Date.now().toString() }]);
+  const deleteMember = async (id: string) => {
+    try {
+      await deleteFromSupabase(Number(id));
+      setMembers((prev) => prev.filter((m) => m.id !== id));
+      setOpenDeleteDialog(false);
+      alert('Member deleted successfully');
+      refetch();
+    } catch (err) {
+      console.error('Error deleting member:', err);
+      alert('Failed to delete member. Please try again.');
     }
-    setOpenDialog(null);
-    setCurrentMember(null);
+  };  // Save member (add or edit)
+  const saveMember = async (member: Member) => {
+    try {
+      const data = await saveToSupabase(member, !!currentMember);
+
+      // Update local state
+      if (currentMember) {
+        setMembers(prev => prev.map(m => m.id === data.id ? data : m));
+      } else {
+        setMembers(prev => [...prev, data]);
+      }
+
+      // Close dialog and reset current member
+      setOpenDialog(null);
+      setCurrentMember(null);
+
+      // Refetch the data to ensure we have latest state
+      refetch();
+
+      alert(currentMember ? 'Member updated successfully' : 'Member added successfully');
+    } catch (error) {
+      console.error('Error saving member:', error);
+      alert('Failed to save member. Please try again.');
+    }
   };
 
   // Sort members client-side
   const sortedMembers = [...members].sort((a, b) => {
     if (!sortField) return 0;
 
-    const aValue = a[sortField];
-    const bValue = b[sortField];
+    const aValue = a[sortField] ?? "";
+    const bValue = b[sortField] ?? "";
 
-    if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
-    if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
-    return 0;
+    return (sortDirection === "asc" ? 1 : -1) *
+      (aValue < bValue ? -1 : aValue > bValue ? 1 : 0);
   });
 
   // Calculate total pages
@@ -380,6 +436,7 @@ export function MembersSection() {
     );
   }
 
+  // Create the dialog content section
   return (
     <div className="space-y-4">
       {/* Search and Filter Bar */}
@@ -444,25 +501,42 @@ export function MembersSection() {
                 <h4 className="text-sm font-medium text-muted-foreground">
                   Name
                 </h4>
-                <p>{currentMember.name}</p>
+                <p>{currentMember.name} {currentMember.surname}</p>
               </div>
               <div>
                 <h4 className="text-sm font-medium text-muted-foreground">
-                  Email
+                  Family Number
                 </h4>
-                <p>{currentMember.email}</p>
+                <p>{currentMember.family_no}</p>
               </div>
               <div>
                 <h4 className="text-sm font-medium text-muted-foreground">
-                  Phone
+                  Contact Information
                 </h4>
-                <p>{currentMember.phone}</p>
+                <p>Email: {currentMember.email}</p>
+                <p>Mobile: {currentMember.mobile_no1}</p>
+                {currentMember.mobile_no2 && <p>Alternate Mobile: {currentMember.mobile_no2}</p>}
+                {currentMember.residential_landline && <p>Residential: {currentMember.residential_landline}</p>}
+                {currentMember.landline_office && <p>Office: {currentMember.landline_office}</p>}
               </div>
               <div>
                 <h4 className="text-sm font-medium text-muted-foreground">
-                  Join Date
+                  Personal Information
                 </h4>
-                <p>{currentMember.joinDate}</p>
+                <p>Gender: {currentMember.gender}</p>
+                <p>Date of Birth: {currentMember.date_of_birth}</p>
+                <p>Blood Group: {currentMember.blood_group}</p>
+                <p>Marital Status: {currentMember.marital_status}</p>
+                {currentMember.marriage_date && <p>Marriage Date: {currentMember.marriage_date}</p>}
+              </div>
+              <div>
+                <h4 className="text-sm font-medium text-muted-foreground">
+                  Educational & Professional Information
+                </h4>
+                {currentMember.education && <p>Education: {currentMember.education}</p>}
+                {currentMember.stream && <p>Stream: {currentMember.stream}</p>}
+                {currentMember.qualification && <p>Qualification: {currentMember.qualification}</p>}
+                {currentMember.occupation && <p>Occupation: {currentMember.occupation}</p>}
               </div>
             </div>
           )}
@@ -480,31 +554,57 @@ export function MembersSection() {
         </DialogContent>
       </Dialog>
 
-      {/* Add/Edit Member Dialog - Now using our componentized AddMemberForm */}
+      {/* Add/Edit Member Dialog */}
       <Dialog
         open={openDialog === "edit" || openDialog === "add"}
         onOpenChange={(open) => {
           if (!open) setOpenDialog(null);
         }}
       >
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>
-              {currentMember ? "Edit Member" : "Add New Member"}
-            </DialogTitle>
-            <DialogDescription>
-              {currentMember
-                ? "Update the member details below."
-                : "Fill in the details to add a new member."}
-            </DialogDescription>
-          </DialogHeader>
-          
-          {/* Use our new AddMemberForm component */}
-          <AddMemberForm 
-            currentMember={currentMember}
-            onSave={saveMember}
-            onCancel={() => setOpenDialog(null)}
-          />
+        <DialogContent className="sm:max-w-[600px] h-[90vh] flex flex-col p-0">
+          <div className="p-6 pb-4 border-b">
+            <DialogHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <DialogTitle>
+                    {currentMember ? "Edit Member" : "Add New Member"}
+                  </DialogTitle>
+                  <DialogDescription>
+                    {currentMember
+                      ? "Update the member details below."
+                      : "Fill in the details to add a new member."}
+                  </DialogDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fillFormData && fillFormData()}
+                >
+                  Fill Test Data
+                </Button>
+              </div>
+            </DialogHeader>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-6">
+            <AddMemberForm
+              currentMember={currentMember}
+              onSave={saveMember}
+              onCancel={() => setOpenDialog(null)}
+              onFillDummyData={handleFillDummyData}
+            />
+          </div>
+
+          <div className="p-6 pt-4 border-t">
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setOpenDialog(null)}>
+                Cancel
+              </Button>
+              <Button onClick={() => saveMember(formData)} disabled={memberOpLoading}>
+                {currentMember ? "Update" : "Add"} Member
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 

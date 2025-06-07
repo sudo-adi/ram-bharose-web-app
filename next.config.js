@@ -1,4 +1,9 @@
-module.exports = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  // Disable lightning CSS for Windows compatibility
+  experimental: {
+    optimizeCss: false,
+  },
   images: {
     remotePatterns: [
       {
@@ -24,3 +29,5 @@ module.exports = {
     ],
   },
 };
+
+module.exports = nextConfig;
