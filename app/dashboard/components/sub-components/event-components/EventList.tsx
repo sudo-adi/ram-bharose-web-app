@@ -12,7 +12,7 @@ interface EventListProps {
 }
 
 export function EventList({ events, searchQuery }: EventListProps) {
-    if (events.length === 0) {
+    if (!events || events.length === 0) {
         return (
             <div className="text-center py-10">
                 <p className="text-gray-500">
@@ -30,7 +30,7 @@ export function EventList({ events, searchQuery }: EventListProps) {
                 <Card key={event.id} className="hover:shadow-lg transition-shadow">
                     <CardContent className="p-6">
                         <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                            {event.title}
+                            {event.name}
                         </h3>
                         <p className="text-sm text-gray-600 mb-4 line-clamp-2">
                             {event.description}
@@ -39,26 +39,21 @@ export function EventList({ events, searchQuery }: EventListProps) {
                         <div className="space-y-2">
                             <div className="flex items-center gap-2 text-sm text-gray-600">
                                 <Calendar className="h-4 w-4 text-orange-500" />
-                                <span>{formatDate(event.event_date)}</span>
+                                <span>{formatDate(event.start_at)}</span>
                             </div>
 
                             <div className="flex items-center gap-2 text-sm text-gray-600">
                                 <Clock className="h-4 w-4 text-orange-500" />
-                                <span>
-                                    {event.start_time} - {event.end_time}
-                                </span>
-                            </div>
-
-                            <div className="flex items-center gap-2 text-sm text-gray-600">
-                                <MapPin className="h-4 w-4 text-orange-500" />
-                                <span>{event.location}, {event.city}</span>
+                                <span>{event.duration}</span>
                             </div>
                         </div>
 
                         <div className="mt-4 flex flex-wrap gap-2">
-                            <Badge variant="secondary" className="bg-orange-50 text-orange-600">
-                                {event.organizer_name}
-                            </Badge>
+                            {event.organizers.map((organizer, index) => (
+                                <Badge key={index} variant="secondary" className="bg-orange-50 text-orange-600">
+                                    {organizer}
+                                </Badge>
+                            ))}
                         </div>
                     </CardContent>
                 </Card>

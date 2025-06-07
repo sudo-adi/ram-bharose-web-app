@@ -1443,11 +1443,11 @@ export const useEvents = (page = 1, pageSize = 10, searchQuery = "") => {
       let query = supabase
         .from('events')
         .select('*', { count: 'exact' })
-        .order('event_date', { ascending: true })
+        .order('start_at', { ascending: true })
         .range(from, to);
 
       if (searchQuery) {
-        query = query.or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
+        query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
       }
 
       const { data, error, count } = await query;
