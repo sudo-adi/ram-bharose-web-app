@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { useState, useEffect } from "react";
 import { decode } from 'base64-arraybuffer';
+import { Event } from "../app/dashboard/components/sub-components/event-components/types";
 
 // Hook for member operations (add, update, delete)
 export const useMemberOperations = () => {
@@ -1407,27 +1408,11 @@ export const useAddProfile = () => {
   return { addProfile, loading, error, success };
 };
 
-// Add this type with your other type definitions
-type Event = {
-  id: string;
-  user_id: string;
-  title: string;
-  description: string;
-  event_date: string;
-  start_time: string;
-  end_time: string;
-  location: string;
-  city: string;
-  organizer_name: string;
-  contact_email: string;
-  contact_phone: string;
-  website: string;
-  created_at: string;
-};
+
 
 // Add this hook with your other hooks
-export const useEvents = (page = 1, pageSize = 10, searchQuery = "") => {
-  const [result, setResult] = useState<UseQueryResult<{ data: Event[]; count: number }>>({
+export const useEvents = () => {
+  const [result, setResult] = useState<UseQueryResult<Event[]>>({
     data: null,
     error: null,
     loading: true,
@@ -1435,27 +1420,29 @@ export const useEvents = (page = 1, pageSize = 10, searchQuery = "") => {
 
   const fetchEvents = async () => {
     try {
-      setResult(prev => ({ ...prev, loading: true }));
-
-      const from = (page - 1) * pageSize;
-      const to = from + pageSize - 1;
-
-      let query = supabase
+      setResult((prev) => ({ ...prev, loading: true }));
+      const { data: events, error } = await supabase
         .from('events')
-        .select('*', { count: 'exact' })
-        .order('start_at', { ascending: true })
-        .range(from, to);
-
-      if (searchQuery) {
-        query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
-      }
-
-      const { data, error, count } = await query;
+        .select('*')
+        .order('start_at', { ascending: true });
 
       if (error) throw error;
 
+      // Transform events to include proper image URLs
+      const eventsWithImages = events.map(event => {
+        const { data: imageData } = supabase.storage
+          .from('application-docs')
+          .getPublicUrl(`${event.image_url}`);
+
+        return {
+          ...event,
+          image_url: imageData.publicUrl
+        };
+      });
+
+      console.log("Fetched events:", eventsWithImages);
       setResult({
-        data: { data: data || [], count: count || 0 },
+        data: eventsWithImages,
         error: null,
         loading: false,
       });
@@ -1470,7 +1457,7 @@ export const useEvents = (page = 1, pageSize = 10, searchQuery = "") => {
 
   useEffect(() => {
     fetchEvents();
-  }, [page, pageSize, searchQuery]);
+  }, []);
 
   return { ...result, refetch: fetchEvents };
 };

@@ -16,8 +16,8 @@ export function EventsSection() {
     loading,
     error,
     refetch,
-  } = useEvents(1, 50, searchQuery);
-
+  } = useEvents();
+  // console.log("Rendering EventsSection with eventData:", eventData);
   const handleRefresh = () => {
     refetch();
   };
@@ -112,7 +112,7 @@ export function EventsSection() {
       </div>
 
       {/* Events List */}
-      <EventList events={eventData?.data || []} searchQuery={searchQuery} />
+      <EventList events={eventData || []} searchQuery={searchQuery} />
     </div>
   );
 }

@@ -2,9 +2,10 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, MapPin } from "lucide-react";
+import { Calendar, MapPin } from "lucide-react";
 import { Event } from "./types";
 import { formatDate } from "@/lib/utils";
+import Image from "next/image";
 
 interface EventListProps {
     events: Event[];
@@ -12,7 +13,8 @@ interface EventListProps {
 }
 
 export function EventList({ events, searchQuery }: EventListProps) {
-    if (!events || events.length === 0) {
+    console.log("Rendering EventList with events:", events);
+    if (events.length === 0) {
         return (
             <div className="text-center py-10">
                 <p className="text-gray-500">
@@ -25,11 +27,21 @@ export function EventList({ events, searchQuery }: EventListProps) {
     }
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {events.map((event) => (
-                <Card key={event.id} className="hover:shadow-lg transition-shadow">
-                    <CardContent className="p-6">
-                        <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                <Card key={event.id} className="overflow-hidden">
+                    {event.image_url && (
+                        <div className="relative h-48 w-full">
+                            <Image
+                                src={event.image_url}
+                                alt={event.name}
+                                fill
+                                className="object-cover"
+                            />
+                        </div>
+                    )}
+                    <CardContent className="p-4">
+                        <h3 className="text-xl font-semibold mb-2">
                             {event.name}
                         </h3>
                         <p className="text-sm text-gray-600 mb-4 line-clamp-2">
@@ -37,23 +49,29 @@ export function EventList({ events, searchQuery }: EventListProps) {
                         </p>
 
                         <div className="space-y-2">
-                            <div className="flex items-center gap-2 text-sm text-gray-600">
-                                <Calendar className="h-4 w-4 text-orange-500" />
-                                <span>{formatDate(event.start_at)}</span>
+                            <div className="flex items-center">
+                                <Calendar className="w-4 h-4 mr-2" />
+                                <span className="text-sm">
+                                    {formatDate(event.start_at)} ({event.duration})
+                                </span>
                             </div>
 
-                            <div className="flex items-center gap-2 text-sm text-gray-600">
-                                <Clock className="h-4 w-4 text-orange-500" />
-                                <span>{event.duration}</span>
+                            <div className="flex items-center">
+                                <MapPin className="w-4 h-4 mr-2" />
+                                <span className="text-sm">
+                                    {event.location}, {event.city}
+                                </span>
                             </div>
-                        </div>
 
-                        <div className="mt-4 flex flex-wrap gap-2">
-                            {event.organizers.map((organizer, index) => (
-                                <Badge key={index} variant="secondary" className="bg-orange-50 text-orange-600">
-                                    {organizer}
-                                </Badge>
-                            ))}
+                            {event.organizers && event.organizers.length > 0 && (
+                                <div className="flex flex-wrap gap-2">
+                                    {event.organizers.map((organizer, index) => (
+                                        <Badge key={index} variant="secondary">
+                                            {organizer}
+                                        </Badge>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </CardContent>
                 </Card>
