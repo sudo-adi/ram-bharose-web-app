@@ -6,20 +6,29 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  MapPin,
+  Phone,
+  Mail,
+  Globe,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, Users, DollarSign, Check, X } from "lucide-react";
 import {
-  EventApplication,
-  DonationApplication,
-  ApplicationType,
-} from "./types";
+  Calendar,
+  Clock,
+  Users,
+  DollarSign,
+  Check,
+  X
+} from "lucide-react";
+import { ApplicationType } from "./types";
 
 type ApplicationDetailDialogProps = {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
-  selectedEvent: EventApplication | null;
-  selectedDonation: DonationApplication | null;
+  selectedApplication: any;
+  applicationType: ApplicationType;
   onUpdateStatus: (
     type: ApplicationType,
     id: number,
@@ -28,20 +37,65 @@ type ApplicationDetailDialogProps = {
   formatDate: (dateString: string) => string;
 };
 
-export const ApplicationDetailDialog: React.FC<
-  ApplicationDetailDialogProps
-> = ({
+export const ApplicationDetailDialog: React.FC<ApplicationDetailDialogProps> = ({
   isOpen,
   setIsOpen,
-  selectedEvent,
-  selectedDonation,
+  selectedApplication,
+  applicationType,
   onUpdateStatus,
   formatDate,
 }) => {
-  const application = selectedEvent || selectedDonation;
-  if (!application) return null;
+  if (!selectedApplication) return null;
 
-  const isEvent = !!selectedEvent;
+  // Only allow approving and rejecting for events and donation applications as requested
+  const canApproveOrReject = applicationType === "event" || applicationType === "donation";
+
+  // For non-event/donation applications, just show basic view with "Coming soon..." message for approval
+  if (applicationType !== "event" && applicationType !== "donation") {
+    return (
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="sm:max-w-md md:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-gray-800">
+              Application Details
+            </DialogTitle>
+            <DialogDescription className="text-sm text-gray-500">
+              Submitted on {formatDate(selectedApplication.created_at)}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="p-4 mt-4 bg-gray-50 rounded-md border border-gray-200">
+            <h4 className="font-medium mb-2 text-gray-700">Application Information</h4>
+            <div className="space-y-2">
+              <p className="text-sm text-gray-600">
+                <span className="font-semibold">Status:</span> {selectedApplication.status?.toUpperCase() || "PENDING"}
+              </p>
+              {/* Show some basic information based on application type */}
+              {Object.keys(selectedApplication).map((key, index) => {
+                // Skip showing some basic fields and complex objects
+                if (['id', 'user_id', 'created_at', 'status', 'image_url'].includes(key) ||
+                  typeof selectedApplication[key] === 'object') {
+                  return null;
+                }
+                return (
+                  <p key={index} className="text-sm text-gray-600">
+                    <span className="font-semibold">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</span>{' '}
+                    {selectedApplication[key]?.toString()}
+                  </p>
+                );
+              }).filter(Boolean).slice(0, 10)} {/* Limit to 10 fields for simplicity */}
+            </div>
+          </div>
+
+          <div className="p-4 bg-yellow-50 rounded-md border border-yellow-200 mt-4">
+            <p className="text-center text-yellow-700 font-medium">Approvals coming soon...</p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  const isEvent = applicationType === "event";
 
   // Get status badge color
   const getStatusColor = (status: string) => {
@@ -63,19 +117,20 @@ export const ApplicationDetailDialog: React.FC<
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-gray-800">
             {isEvent
-              ? selectedEvent?.name
-              : `Donation for ${selectedDonation?.cause}`}
+              ? selectedApplication.name
+              : `Donation for ${selectedApplication.cause}`
+            }
           </DialogTitle>
           <DialogDescription className="text-sm text-gray-500">
-            Submitted on {formatDate(application.created_at)}
+            Submitted on {formatDate(selectedApplication.created_at || selectedApplication.submitted_at)}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 mt-4">
-          {application.image_url && (
+          {selectedApplication.image_url && (
             <div className="w-full h-48 relative rounded-md overflow-hidden border border-gray-200">
               <img
-                src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/application-pictures/${application.image_url}`}
+                src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/application-pictures/${selectedApplication.image_url}`}
                 alt={isEvent ? "Event image" : "Donation image"}
                 className="object-cover w-full h-full"
               />
@@ -84,7 +139,7 @@ export const ApplicationDetailDialog: React.FC<
 
           <div className="p-4 bg-gray-50 rounded-md border border-gray-200">
             <h4 className="font-medium mb-2 text-gray-700">Description</h4>
-            <p className="text-sm text-gray-600">{application.description}</p>
+            <p className="text-sm text-gray-600">{selectedApplication.description}</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -96,7 +151,7 @@ export const ApplicationDetailDialog: React.FC<
                     <h4 className="font-medium text-gray-700">Start Time</h4>
                   </div>
                   <p className="text-sm text-gray-600">
-                    {formatDate(selectedEvent!.start_at)}
+                    {formatDate(selectedApplication.start_at)}
                   </p>
                 </div>
                 <div className="p-3 bg-white rounded-md border border-gray-200">
@@ -105,18 +160,58 @@ export const ApplicationDetailDialog: React.FC<
                     <h4 className="font-medium text-gray-700">Duration</h4>
                   </div>
                   <p className="text-sm text-gray-600">
-                    {selectedEvent!.duration}
+                    {selectedApplication.duration}
                   </p>
                 </div>
-                <div className="p-3 bg-white rounded-md border border-gray-200 md:col-span-2">
+                <div className="p-3 bg-white rounded-md border border-gray-200">
+                  <div className="flex items-center mb-2">
+                    <MapPin className="h-4 w-4 mr-2 text-orange-500" />
+                    <h4 className="font-medium text-gray-700">Location</h4>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    {selectedApplication.location}, {selectedApplication.city}
+                  </p>
+                </div>
+                <div className="p-3 bg-white rounded-md border border-gray-200">
                   <div className="flex items-center mb-2">
                     <Users className="h-4 w-4 mr-2 text-orange-500" />
                     <h4 className="font-medium text-gray-700">Organizers</h4>
                   </div>
                   <p className="text-sm text-gray-600">
-                    {selectedEvent!.organizers.join(", ")}
+                    {selectedApplication.organizers.join(", ")}
                   </p>
                 </div>
+                <div className="p-3 bg-white rounded-md border border-gray-200">
+                  <div className="flex items-center mb-2">
+                    <Phone className="h-4 w-4 mr-2 text-orange-500" />
+                    <h4 className="font-medium text-gray-700">Contact</h4>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    {selectedApplication.contact_phone}
+                  </p>
+                </div>
+                <div className="p-3 bg-white rounded-md border border-gray-200">
+                  <div className="flex items-center mb-2">
+                    <Mail className="h-4 w-4 mr-2 text-orange-500" />
+                    <h4 className="font-medium text-gray-700">Email</h4>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    {selectedApplication.contact_email}
+                  </p>
+                </div>
+                {selectedApplication.website && (
+                  <div className="p-3 bg-white rounded-md border border-gray-200">
+                    <div className="flex items-center mb-2">
+                      <Globe className="h-4 w-4 mr-2 text-orange-500" />
+                      <h4 className="font-medium text-gray-700">Website</h4>
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      <a href={selectedApplication.website} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+                        {selectedApplication.website}
+                      </a>
+                    </p>
+                  </div>
+                )}
               </>
             ) : (
               <>
@@ -126,7 +221,7 @@ export const ApplicationDetailDialog: React.FC<
                     <h4 className="font-medium text-gray-700">Amount</h4>
                   </div>
                   <p className="text-sm text-gray-600">
-                    ₹{selectedDonation!.amount.toLocaleString()}
+                    ₹{selectedApplication.amount.toLocaleString()}
                   </p>
                 </div>
                 <div className="p-3 bg-white rounded-md border border-gray-200">
@@ -135,7 +230,7 @@ export const ApplicationDetailDialog: React.FC<
                     <h4 className="font-medium text-gray-700">Open Till</h4>
                   </div>
                   <p className="text-sm text-gray-600">
-                    {formatDate(selectedDonation!.open_till)}
+                    {formatDate(selectedApplication.open_till)}
                   </p>
                 </div>
               </>
@@ -144,8 +239,8 @@ export const ApplicationDetailDialog: React.FC<
 
           <div className="p-3 bg-white rounded-md border border-gray-200">
             <h4 className="font-medium mb-2 text-gray-700">Status</h4>
-            <Badge className={`${getStatusColor(application.status)}`}>
-              {application.status?.toUpperCase() || "PENDING"}
+            <Badge className={`${getStatusColor(selectedApplication.status)}`}>
+              {selectedApplication.status?.toUpperCase() || "PENDING"}
             </Badge>
           </div>
         </div>
@@ -156,13 +251,13 @@ export const ApplicationDetailDialog: React.FC<
             className="text-green-600 border-green-600 hover:bg-green-50"
             onClick={() => {
               onUpdateStatus(
-                isEvent ? "event" : "donation",
-                application.id,
+                applicationType,
+                selectedApplication.id,
                 "approved"
               );
               setIsOpen(false);
             }}
-            disabled={application.status !== "pending"}
+            disabled={selectedApplication.status !== "pending"}
           >
             <Check className="h-4 w-4 mr-1" /> Accept
           </Button>
@@ -171,13 +266,13 @@ export const ApplicationDetailDialog: React.FC<
             className="text-red-600 border-red-600 hover:bg-red-50"
             onClick={() => {
               onUpdateStatus(
-                isEvent ? "event" : "donation",
-                application.id,
+                applicationType,
+                selectedApplication.id,
                 "rejected"
               );
               setIsOpen(false);
             }}
-            disabled={application.status !== "pending"}
+            disabled={selectedApplication.status !== "pending"}
           >
             <X className="h-4 w-4 mr-1" /> Reject
           </Button>

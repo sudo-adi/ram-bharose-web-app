@@ -15,32 +15,45 @@ import {
   EventApplication,
   DonationApplication,
   ApplicationType,
+  EducationLoanApplication,
+  BusinessLoanApplication,
+  GirlsHostelApplication,
+  MulundHostelApplication,
+  VatsalyadhamApplication,
+  LoanApplicationType,
+  HostelApplicationType
 } from "./sub-components/application-components/types";
 
 const ApplicationsSection = () => {
   // State for applications
-  const [eventApplications, setEventApplications] = useState<
-    EventApplication[]
-  >([]);
-  const [donationApplications, setDonationApplications] = useState<
-    DonationApplication[]
-  >([]);
+  const [eventApplications, setEventApplications] = useState<EventApplication[]>([]);
+  const [donationApplications, setDonationApplications] = useState<DonationApplication[]>([]);
+  const [educationLoanApplications, setEducationLoanApplications] = useState<EducationLoanApplication[]>([]);
+  const [businessLoanApplications, setBusinessLoanApplications] = useState<BusinessLoanApplication[]>([]);
+  const [girlsHostelApplications, setGirlsHostelApplications] = useState<GirlsHostelApplication[]>([]);
+  const [mulundHostelApplications, setMulundHostelApplications] = useState<MulundHostelApplication[]>([]);
+  const [vatsalyadhamApplications, setVatsalyadhamApplications] = useState<VatsalyadhamApplication[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filteredEventApplications, setFilteredEventApplications] = useState<
-    EventApplication[]
-  >([]);
-  const [filteredDonationApplications, setFilteredDonationApplications] =
-    useState<DonationApplication[]>([]);
+  const [activeTab, setActiveTab] = useState<string>("events");
+  const [activeLoanTab, setActiveLoanTab] = useState<string>("education_loan");
+  const [activeHostelTab, setActiveHostelTab] = useState<string>("girls_hostel");
+
+  // Filtered applications state
+  const [filteredEventApplications, setFilteredEventApplications] = useState<EventApplication[]>([]);
+  const [filteredDonationApplications, setFilteredDonationApplications] = useState<DonationApplication[]>([]);
+  const [filteredEducationLoanApplications, setFilteredEducationLoanApplications] = useState<EducationLoanApplication[]>([]);
+  const [filteredBusinessLoanApplications, setFilteredBusinessLoanApplications] = useState<BusinessLoanApplication[]>([]);
+  const [filteredGirlsHostelApplications, setFilteredGirlsHostelApplications] = useState<GirlsHostelApplication[]>([]);
+  const [filteredMulundHostelApplications, setFilteredMulundHostelApplications] = useState<MulundHostelApplication[]>([]);
+  const [filteredVatsalyadhamApplications, setFilteredVatsalyadhamApplications] = useState<VatsalyadhamApplication[]>([]);
 
   // State for application detail dialog
-  const [selectedEvent, setSelectedEvent] = useState<EventApplication | null>(
-    null
-  );
-  const [selectedDonation, setSelectedDonation] =
-    useState<DonationApplication | null>(null);
+  const [selectedApplication, setSelectedApplication] = useState<any>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [selectedApplicationType, setSelectedApplicationType] = useState<ApplicationType>("event");
 
   // Fetch applications
   const fetchApplications = async () => {
@@ -51,18 +64,51 @@ const ApplicationsSection = () => {
       const { data: eventData, error: eventError } = await supabase
         .from("event_applications")
         .select("*");
-
       if (eventError) throw eventError;
 
       // Fetch donation applications
       const { data: donationData, error: donationError } = await supabase
         .from("donation_applications")
         .select("*");
-
       if (donationError) throw donationError;
+
+      // Fetch education loan applications
+      const { data: educationLoanData, error: educationLoanError } = await supabase
+        .from("education_loan_applications")
+        .select("*");
+      if (educationLoanError) throw educationLoanError;
+
+      // Fetch business loan applications
+      const { data: businessLoanData, error: businessLoanError } = await supabase
+        .from("business_loan_applications")
+        .select("*");
+      if (businessLoanError) throw businessLoanError;
+
+      // Fetch girls hostel applications
+      const { data: girlsHostelData, error: girlsHostelError } = await supabase
+        .from("girls_hostel_form")
+        .select("*");
+      if (girlsHostelError) throw girlsHostelError;
+
+      // Fetch mulund hostel applications
+      const { data: mulundHostelData, error: mulundHostelError } = await supabase
+        .from("mulund_hostel_form")
+        .select("*");
+      if (mulundHostelError) throw mulundHostelError;
+
+      // Fetch vatsalyadham applications
+      const { data: vatsalyadhamData, error: vatsalyadhamError } = await supabase
+        .from("vatsalyadham_form")
+        .select("*");
+      if (vatsalyadhamError) throw vatsalyadhamError;
 
       setEventApplications(eventData || []);
       setDonationApplications(donationData || []);
+      setEducationLoanApplications(educationLoanData || []);
+      setBusinessLoanApplications(businessLoanData || []);
+      setGirlsHostelApplications(girlsHostelData || []);
+      setMulundHostelApplications(mulundHostelData || []);
+      setVatsalyadhamApplications(vatsalyadhamData || []);
     } catch (err: any) {
       setError(err.message);
       console.error("Error fetching applications:", err);
@@ -71,42 +117,100 @@ const ApplicationsSection = () => {
     }
   };
 
+  // Get table name based on application type
+  const getTableName = (type: ApplicationType): string => {
+    switch (type) {
+      case "event": return "event_applications";
+      case "donation": return "donation_applications";
+      case "education_loan": return "education_loan_applications";
+      case "business_loan": return "business_loan_applications";
+      case "girls_hostel": return "girls_hostel_form";
+      case "mulund_hostel": return "mulund_hostel_form";
+      case "vatsalyadham": return "vatsalyadham_form";
+      default: return "";
+    }
+  };
+
+  // Get target table name for successful applications
+  const getTargetTable = (type: ApplicationType): string | null => {
+    switch (type) {
+      case "event": return "events";
+      case "donation": return "donations";
+      default: return null;
+    }
+  };
+
   // Update application status
   const updateApplicationStatus = async (
     type: ApplicationType,
-    id: number,
+    id: string,
     status: "approved" | "rejected"
   ) => {
     try {
-      const tableName =
-        type === "event" ? "event_applications" : "donation_applications";
+      const tableName = getTableName(type);
 
-      const { error } = await supabase
-        .from(tableName)
-        .update({ status })
-        .eq("id", id);
+      // Only event and donation applications can be moved to main table when approved
+      if ((type === "event" || type === "donation") && status === "approved") {
+        // Get the application data
+        const { data: applicationData, error: fetchError } = await supabase
+          .from(tableName)
+          .select("*")
+          .eq("id", id)
+          .single();
 
-      if (error) throw error;
+        if (fetchError) throw fetchError;
+
+        // Insert into target table
+        const targetTable = getTargetTable(type);
+        if (targetTable) {
+          // Prepare the data for insertion by removing application-specific fields
+          const dataToInsert = { ...applicationData };
+
+          // Remove fields that shouldn't be transferred
+          delete dataToInsert.status;
+
+          // Insert into the target table
+          const { error: insertError } = await supabase
+            .from(targetTable)
+            .insert([dataToInsert]);
+
+          if (insertError) throw insertError;
+        }
+
+        // Delete from applications table after successful insertion
+        const { error: deleteError } = await supabase
+          .from(tableName)
+          .delete()
+          .eq("id", id);
+
+        if (deleteError) throw deleteError;
+      } else {
+        // Just update status for all other applications or when rejecting
+        const { error } = await supabase
+          .from(tableName)
+          .update({ status })
+          .eq("id", id);
+
+        if (error) throw error;
+      }
 
       // Refresh applications after update
       fetchApplications();
     } catch (err: any) {
       console.error(`Error updating ${type} application:`, err);
+      setError(`Failed to update application: ${err.message}`);
+      // Clear error after 3 seconds
+      setTimeout(() => setError(null), 3000);
     }
   };
 
   // View application details
   const viewApplicationDetails = (
     type: ApplicationType,
-    application: EventApplication | DonationApplication
+    application: any
   ) => {
-    if (type === "event") {
-      setSelectedEvent(application as EventApplication);
-      setSelectedDonation(null);
-    } else {
-      setSelectedDonation(application as DonationApplication);
-      setSelectedEvent(null);
-    }
+    setSelectedApplication(application);
+    setSelectedApplicationType(type);
     setDetailDialogOpen(true);
   };
 
@@ -121,20 +225,75 @@ const ApplicationsSection = () => {
 
   // Filter applications based on search query
   useEffect(() => {
+    // Filter event applications
     if (eventApplications.length > 0) {
       const filtered = eventApplications.filter((app) =>
-        app.name.toLowerCase().includes(searchQuery.toLowerCase())
+        app.name?.toLowerCase().includes(searchQuery.toLowerCase())
       );
       setFilteredEventApplications(filtered);
     }
 
+    // Filter donation applications
     if (donationApplications.length > 0) {
       const filtered = donationApplications.filter((app) =>
-        app.cause.toLowerCase().includes(searchQuery.toLowerCase())
+        app.cause?.toLowerCase().includes(searchQuery.toLowerCase())
       );
       setFilteredDonationApplications(filtered);
     }
-  }, [searchQuery, eventApplications, donationApplications]);
+
+    // Filter education loan applications
+    if (educationLoanApplications.length > 0) {
+      const filtered = educationLoanApplications.filter((app) =>
+        app.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        app.institution_name?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setFilteredEducationLoanApplications(filtered);
+    }
+
+    // Filter business loan applications
+    if (businessLoanApplications.length > 0) {
+      const filtered = businessLoanApplications.filter((app) =>
+        app.business_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        app.nature_of_business?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setFilteredBusinessLoanApplications(filtered);
+    }
+
+    // Filter girls hostel applications
+    if (girlsHostelApplications.length > 0) {
+      const filtered = girlsHostelApplications.filter((app) =>
+        app.applicant_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (app.institution && app.institution.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+      setFilteredGirlsHostelApplications(filtered);
+    }
+
+    // Filter mulund hostel applications
+    if (mulundHostelApplications.length > 0) {
+      const filtered = mulundHostelApplications.filter((app) =>
+        app.applicant_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (app.institution && app.institution.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+      setFilteredMulundHostelApplications(filtered);
+    }
+
+    // Filter vatsalyadham applications
+    if (vatsalyadhamApplications.length > 0) {
+      const filtered = vatsalyadhamApplications.filter((app) =>
+        app.applicant_name?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setFilteredVatsalyadhamApplications(filtered);
+    }
+  }, [
+    searchQuery,
+    eventApplications,
+    donationApplications,
+    educationLoanApplications,
+    businessLoanApplications,
+    girlsHostelApplications,
+    mulundHostelApplications,
+    vatsalyadhamApplications
+  ]);
 
   // Load applications on component mount
   useEffect(() => {
@@ -235,7 +394,12 @@ const ApplicationsSection = () => {
           )}
         </div>
 
-        <Tabs defaultValue="events" className="w-full">
+        <Tabs
+          defaultValue="events"
+          className="w-full"
+          value={activeTab}
+          onValueChange={setActiveTab}
+        >
           <TabsList className="mb-4">
             <TabsTrigger value="events" className="px-4 py-2">
               Event Applications
@@ -243,8 +407,15 @@ const ApplicationsSection = () => {
             <TabsTrigger value="donations" className="px-4 py-2">
               Donation Applications
             </TabsTrigger>
+            <TabsTrigger value="loans" className="px-4 py-2">
+              Loan Applications
+            </TabsTrigger>
+            <TabsTrigger value="hostels" className="px-4 py-2">
+              Hostel Applications
+            </TabsTrigger>
           </TabsList>
 
+          {/* Event Applications */}
           <TabsContent value="events" className="pt-2">
             <ApplicationList
               applications={
@@ -258,6 +429,7 @@ const ApplicationsSection = () => {
             />
           </TabsContent>
 
+          {/* Donation Applications */}
           <TabsContent value="donations" className="pt-2">
             <ApplicationList
               applications={
@@ -272,16 +444,137 @@ const ApplicationsSection = () => {
               searchQuery={searchQuery}
             />
           </TabsContent>
+
+          {/* Loan Applications */}
+          <TabsContent value="loans" className="pt-2">
+            <Tabs
+              defaultValue="education_loan"
+              value={activeLoanTab}
+              onValueChange={setActiveLoanTab}
+              className="w-full"
+            >
+              <TabsList className="mb-4">
+                <TabsTrigger value="education_loan" className="px-4 py-2">
+                  Education Loans
+                </TabsTrigger>
+                <TabsTrigger value="business_loan" className="px-4 py-2">
+                  Business Loans
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Education Loan Applications */}
+              <TabsContent value="education_loan" className="pt-2">
+                <ApplicationList
+                  applications={
+                    searchQuery
+                      ? filteredEducationLoanApplications
+                      : educationLoanApplications
+                  }
+                  type="education_loan"
+                  onView={viewApplicationDetails}
+                  onUpdateStatus={updateApplicationStatus}
+                  formatDate={formatDate}
+                  searchQuery={searchQuery}
+                />
+              </TabsContent>
+
+              {/* Business Loan Applications */}
+              <TabsContent value="business_loan" className="pt-2">
+                <ApplicationList
+                  applications={
+                    searchQuery
+                      ? filteredBusinessLoanApplications
+                      : businessLoanApplications
+                  }
+                  type="business_loan"
+                  onView={viewApplicationDetails}
+                  onUpdateStatus={updateApplicationStatus}
+                  formatDate={formatDate}
+                  searchQuery={searchQuery}
+                />
+              </TabsContent>
+            </Tabs>
+          </TabsContent>
+
+          {/* Hostel Applications */}
+          <TabsContent value="hostels" className="pt-2">
+            <Tabs
+              defaultValue="girls_hostel"
+              value={activeHostelTab}
+              onValueChange={setActiveHostelTab}
+              className="w-full"
+            >
+              <TabsList className="mb-4">
+                <TabsTrigger value="girls_hostel" className="px-4 py-2">
+                  Girls Hostel
+                </TabsTrigger>
+                <TabsTrigger value="mulund_hostel" className="px-4 py-2">
+                  Mulund Hostel
+                </TabsTrigger>
+                <TabsTrigger value="vatsalyadham" className="px-4 py-2">
+                  Vatsalyadham
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Girls Hostel Applications */}
+              <TabsContent value="girls_hostel" className="pt-2">
+                <ApplicationList
+                  applications={
+                    searchQuery
+                      ? filteredGirlsHostelApplications
+                      : girlsHostelApplications
+                  }
+                  type="girls_hostel"
+                  onView={viewApplicationDetails}
+                  onUpdateStatus={updateApplicationStatus}
+                  formatDate={formatDate}
+                  searchQuery={searchQuery}
+                />
+              </TabsContent>
+
+              {/* Mulund Hostel Applications */}
+              <TabsContent value="mulund_hostel" className="pt-2">
+                <ApplicationList
+                  applications={
+                    searchQuery
+                      ? filteredMulundHostelApplications
+                      : mulundHostelApplications
+                  }
+                  type="mulund_hostel"
+                  onView={viewApplicationDetails}
+                  onUpdateStatus={updateApplicationStatus}
+                  formatDate={formatDate}
+                  searchQuery={searchQuery}
+                />
+              </TabsContent>
+
+              {/* Vatsalyadham Applications */}
+              <TabsContent value="vatsalyadham" className="pt-2">
+                <ApplicationList
+                  applications={
+                    searchQuery
+                      ? filteredVatsalyadhamApplications
+                      : vatsalyadhamApplications
+                  }
+                  type="vatsalyadham"
+                  onView={viewApplicationDetails}
+                  onUpdateStatus={updateApplicationStatus}
+                  formatDate={formatDate}
+                  searchQuery={searchQuery}
+                />
+              </TabsContent>
+            </Tabs>
+          </TabsContent>
         </Tabs>
       </div>
 
       <ApplicationDetailDialog
         isOpen={detailDialogOpen}
         setIsOpen={setDetailDialogOpen}
-        selectedEvent={selectedEvent}
-        selectedDonation={selectedDonation}
+        selectedApplication={selectedApplication}
         onUpdateStatus={updateApplicationStatus}
         formatDate={formatDate}
+        applicationType={selectedApplicationType}
       />
     </>
   );

@@ -5,29 +5,23 @@ import { Badge } from "@/components/ui/badge";
 import {
   Calendar,
   Clock,
-  Users,
   DollarSign,
+  School,
+  Briefcase,
+  Home,
   Eye,
   Check,
   X,
-  ExternalLink,
 } from "lucide-react";
-import {
-  EventApplication,
-  DonationApplication,
-  ApplicationType,
-} from "./types";
+import { ApplicationType } from "./types";
 
 type ApplicationCardProps = {
-  application: EventApplication | DonationApplication;
+  application: any;
   type: ApplicationType;
-  onView: (
-    type: ApplicationType,
-    application: EventApplication | DonationApplication
-  ) => void;
+  onView: (type: ApplicationType, application: any) => void;
   onUpdateStatus?: (
     type: ApplicationType,
-    id: number,
+    id: string,
     status: "approved" | "rejected"
   ) => void;
   formatDate: (dateString: string) => string;
@@ -40,10 +34,48 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
   onUpdateStatus,
   formatDate,
 }) => {
-  // Determine if this is an event or donation application
-  const isEvent = type === "event";
-  const eventApp = isEvent ? (application as EventApplication) : null;
-  const donationApp = !isEvent ? (application as DonationApplication) : null;
+  // Only events and donations can be approved
+  const canApprove = type === "event" || type === "donation";
+
+  // Get application title based on type
+  const getApplicationTitle = () => {
+    switch (type) {
+      case "event":
+        return application.name;
+      case "donation":
+        return application.cause;
+      case "education_loan":
+        return `Education: ${application.full_name}`;
+      case "business_loan":
+        return `Business: ${application.business_name}`;
+      case "girls_hostel":
+      case "mulund_hostel":
+      case "vatsalyadham":
+        return application.applicant_name;
+      default:
+        return "Application";
+    }
+  };
+
+  // Get icon based on application type
+  const getCardIcon = () => {
+    switch (type) {
+      case "event":
+        return <Calendar className="h-3 w-3 mr-1 text-orange-500" />;
+      case "donation":
+        return <DollarSign className="h-3 w-3 mr-1 text-orange-500" />;
+      case "education_loan":
+        return <School className="h-3 w-3 mr-1 text-orange-500" />;
+      case "business_loan":
+        return <Briefcase className="h-3 w-3 mr-1 text-orange-500" />;
+      case "girls_hostel":
+      case "mulund_hostel":
+      case "vatsalyadham":
+        return <Home className="h-3 w-3 mr-1 text-orange-500" />;
+      default:
+        return <Calendar className="h-3 w-3 mr-1 text-orange-500" />;
+    }
+  };
 
   // Get status badge color
   const getStatusColor = (status: string) => {
@@ -64,16 +96,91 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
     ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/application-pictures/${application.image_url}`
     : "https://via.placeholder.com/150";
 
+  // Get first detail to show based on application type
+  const getPrimaryDetail = () => {
+    switch (type) {
+      case "event":
+        return (
+          <div className="flex items-center">
+            <Calendar className="h-3 w-3 mr-1 text-orange-500" />
+            <span className="truncate">{formatDate(application.start_at)}</span>
+          </div>
+        );
+      case "donation":
+        return (
+          <div className="flex items-center">
+            <DollarSign className="h-3 w-3 mr-1 text-orange-500" />
+            <span className="truncate">₹{application.amount.toLocaleString()}</span>
+          </div>
+        );
+      case "education_loan":
+        return (
+          <div className="flex items-center">
+            <DollarSign className="h-3 w-3 mr-1 text-orange-500" />
+            <span className="truncate">₹{application.loan_amount.toLocaleString()}</span>
+          </div>
+        );
+      case "business_loan":
+        return (
+          <div className="flex items-center">
+            <DollarSign className="h-3 w-3 mr-1 text-orange-500" />
+            <span className="truncate">₹{application.loan_amount.toLocaleString()}</span>
+          </div>
+        );
+      default:
+        return (
+          <div className="flex items-center">
+            <Calendar className="h-3 w-3 mr-1 text-orange-500" />
+            <span className="truncate">{formatDate(application.created_at)}</span>
+          </div>
+        );
+    }
+  };
+
+  // Get second detail to show based on application type
+  const getSecondaryDetail = () => {
+    switch (type) {
+      case "event":
+        return (
+          <div className="flex items-center">
+            <Clock className="h-3 w-3 mr-1 text-orange-500" />
+            <span className="truncate">{application.duration}</span>
+          </div>
+        );
+      case "donation":
+        return (
+          <div className="flex items-center">
+            <Calendar className="h-3 w-3 mr-1 text-orange-500" />
+            <span className="truncate">
+              Till {formatDate(application.open_till)}
+            </span>
+          </div>
+        );
+      case "education_loan":
+        return (
+          <div className="flex items-center">
+            <School className="h-3 w-3 mr-1 text-orange-500" />
+            <span className="truncate">{application.institution_name}</span>
+          </div>
+        );
+      case "business_loan":
+        return (
+          <div className="flex items-center">
+            <Briefcase className="h-3 w-3 mr-1 text-orange-500" />
+            <span className="truncate">{application.nature_of_business}</span>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="bg-white rounded-lg overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col h-full">
       <div className="relative h-40 w-full overflow-hidden">
         <Image
           src={imageUrl}
-          alt={
-            isEvent
-              ? eventApp?.name || "Event"
-              : donationApp?.cause || "Donation"
-          }
+          alt={getApplicationTitle()}
           fill
           className="object-cover hover:scale-105 transition-transform duration-300"
           onError={() => console.log("Error loading image")}
@@ -91,7 +198,7 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
 
       <div className="p-3 flex-1">
         <h3 className="text-gray-800 font-medium text-sm line-clamp-1 mb-1">
-          {isEvent ? eventApp?.name : donationApp?.cause}
+          {getApplicationTitle()}
         </h3>
         <p className="text-xs text-gray-500 mb-2">
           Submitted on {formatDate(application.created_at)}
@@ -101,35 +208,8 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
         </p>
 
         <div className="mt-auto text-xs text-gray-600 space-y-1">
-          {isEvent ? (
-            <>
-              <div className="flex items-center">
-                <Calendar className="h-3 w-3 mr-1 text-orange-500" />
-                <span className="truncate">
-                  {formatDate(eventApp!.start_at)}
-                </span>
-              </div>
-              <div className="flex items-center">
-                <Clock className="h-3 w-3 mr-1 text-orange-500" />
-                <span className="truncate">{eventApp!.duration}</span>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="flex items-center">
-                <DollarSign className="h-3 w-3 mr-1 text-orange-500" />
-                <span className="truncate">
-                  ₹{donationApp!.amount.toLocaleString()}
-                </span>
-              </div>
-              <div className="flex items-center">
-                <Calendar className="h-3 w-3 mr-1 text-orange-500" />
-                <span className="truncate">
-                  Till {formatDate(donationApp!.open_till)}
-                </span>
-              </div>
-            </>
-          )}
+          {getPrimaryDetail()}
+          {getSecondaryDetail()}
         </div>
       </div>
 
@@ -144,7 +224,7 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
             <Eye className="h-3 w-3 mr-1" /> View
           </Button>
 
-          {application.status === "pending" && onUpdateStatus && (
+          {canApprove && application.status === "pending" && onUpdateStatus && (
             <div className="flex gap-1 w-full">
               <Button
                 variant="outline"
