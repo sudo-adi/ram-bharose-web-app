@@ -31,7 +31,7 @@ type ApplicationDetailDialogProps = {
   applicationType: ApplicationType;
   onUpdateStatus: (
     type: ApplicationType,
-    id: number,
+    id: string,
     status: "approved" | "rejected"
   ) => void;
   formatDate: (dateString: string) => string;
@@ -87,9 +87,9 @@ export const ApplicationDetailDialog: React.FC<ApplicationDetailDialogProps> = (
             </div>
           </div>
 
-          <div className="p-4 bg-yellow-50 rounded-md border border-yellow-200 mt-4">
+          {/* <div className="p-4 bg-yellow-50 rounded-md border border-yellow-200 mt-4">
             <p className="text-center text-yellow-700 font-medium">Approvals coming soon...</p>
-          </div>
+          </div> */}
         </DialogContent>
       </Dialog>
     );
@@ -127,7 +127,7 @@ export const ApplicationDetailDialog: React.FC<ApplicationDetailDialogProps> = (
         </DialogHeader>
 
         <div className="space-y-4 mt-4">
-          {selectedApplication.image_url && (
+          {selectedApplication.image_url && (applicationType === "event" || applicationType === "donation") && (
             <div className="w-full h-48 relative rounded-md overflow-hidden border border-gray-200">
               <img
                 src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/application-pictures/${selectedApplication.image_url}`}
@@ -257,7 +257,6 @@ export const ApplicationDetailDialog: React.FC<ApplicationDetailDialogProps> = (
               );
               setIsOpen(false);
             }}
-            disabled={selectedApplication.status !== "pending"}
           >
             <Check className="h-4 w-4 mr-1" /> Accept
           </Button>
@@ -272,7 +271,6 @@ export const ApplicationDetailDialog: React.FC<ApplicationDetailDialogProps> = (
               );
               setIsOpen(false);
             }}
-            disabled={selectedApplication.status !== "pending"}
           >
             <X className="h-4 w-4 mr-1" /> Reject
           </Button>

@@ -45,13 +45,11 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
       case "donation":
         return application.cause;
       case "education_loan":
-        return `Education: ${application.full_name}`;
       case "business_loan":
-        return `Business: ${application.business_name}`;
       case "girls_hostel":
       case "mulund_hostel":
       case "vatsalyadham":
-        return application.applicant_name;
+        return application.full_name;
       default:
         return "Application";
     }
@@ -93,7 +91,7 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
 
   // Get image URL
   const imageUrl = application.image_url
-    ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/application-pictures/${application.image_url}`
+    ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/application-docs/${application.image_url}`
     : "https://via.placeholder.com/150";
 
   // Get first detail to show based on application type
@@ -175,16 +173,26 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
     }
   };
 
+  // Only show images for event and donation applications
+  const showImage = type === "event" || type === "donation";
+
   return (
     <div className="bg-white rounded-lg overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col h-full">
       <div className="relative h-40 w-full overflow-hidden">
-        <Image
-          src={imageUrl}
-          alt={getApplicationTitle()}
-          fill
-          className="object-cover hover:scale-105 transition-transform duration-300"
-          onError={() => console.log("Error loading image")}
-        />
+        {showImage ? (
+          <Image
+            src={imageUrl}
+            alt={getApplicationTitle()}
+            fill
+            className="object-cover hover:scale-105 transition-transform duration-300"
+            onError={() => console.log("Error loading image")}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-gray-100">
+            {getCardIcon()}
+            <span className="text-sm font-medium text-gray-500 ml-2">{getApplicationTitle()}</span>
+          </div>
+        )}
         <div className="absolute top-2 right-2">
           <Badge
             className={`${getStatusColor(

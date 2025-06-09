@@ -185,10 +185,10 @@ const ApplicationsSection = () => {
 
         if (deleteError) throw deleteError;
       } else {
-        // Just update status for all other applications or when rejecting
+        // Just delete the application from the applications table
         const { error } = await supabase
           .from(tableName)
-          .update({ status })
+          .delete()
           .eq("id", id);
 
         if (error) throw error;
