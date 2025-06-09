@@ -199,6 +199,7 @@ type Business = {
     name: string;
     image: string;
   };
+  image_url?: string;
 };
 
 // Updated hook with pagination, search, and filters
@@ -931,7 +932,7 @@ export const useBusiness = () => {
   const fetchBusinesses = async () => {
     try {
       setResult((prev) => ({ ...prev, loading: true }));
-      const { data, error } = await supabase.from("businesses").select("*");
+      const { data, error } = await supabase.from("nari_sahas").select("*");
 
       if (error) throw error;
 

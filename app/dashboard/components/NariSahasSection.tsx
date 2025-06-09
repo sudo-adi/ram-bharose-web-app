@@ -10,11 +10,9 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import Image from "next/image";
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
 import {
   Phone,
   Mail,
@@ -39,11 +37,12 @@ type Business = {
   website: string;
   created_at: string;
   images?: string[]; // Array of image URLs for the carousel
-  logo?: string; // Business logo URL
+  logo?: string; // Business logoURL
   owner?: {
     name: string;
     image: string;
   };
+  image_url?: string;
 };
 
 export default function NariSahasSection() {
@@ -73,37 +72,10 @@ export default function NariSahasSection() {
   }
 
   // Fallback to sample data if no businesses are found
-  const businessesData = [
-    {
-      id: "1",
-      user_id: "user123",
-      name: "Sunrise Bakery",
-      category: "Food & Beverages",
-      description:
-        "Artisan bakery specializing in fresh bread, pastries, and custom cakes for all occasions. We use locally sourced ingredients and traditional baking methods.",
-      location: "123 Main Street, Mumbai",
-      contact_email: "info@sunrisebakery.com",
-      contact_phone: "+91 9876543210",
-      website: "www.sunrisebakery.com",
-      created_at: "2023-01-15T10:30:00Z",
-      images: [
-        "https://images.unsplash.com/photo-1608198093002-ad4e005484ec",
-        "https://images.unsplash.com/photo-1517433670267-08bbd4be890f",
-        "https://images.unsplash.com/photo-1517433367423-c7e5b0f35086",
-      ],
-      logo: "https://images.unsplash.com/photo-1588195538326-c5b1e9f80a1b?q=80&w=100",
-      owner: {
-        name: "Priya Sharma",
-        image:
-          "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=100",
-      },
-    },
-    // ... other sample businesses
-  ];
+
 
   // Fix 1: Add null check for businesses
-  const displayBusinesses =
-    businesses && businesses.length > 0 ? businesses : businessesData;
+  const displayBusinesses = businesses || [];
 
   // Fix 2: Ensure displayBusinesses is not null before filtering
   const filteredBusinesses = displayBusinesses.filter(
@@ -176,11 +148,10 @@ export default function NariSahasSection() {
           <Button
             key={category}
             variant={category === "All" ? "default" : "outline"}
-            className={`mr-2 whitespace-nowrap ${
-              category === "All"
-                ? "bg-pink-600 hover:bg-pink-700"
-                : "border-pink-200 text-pink-700"
-            }`}
+            className={`mr-2 whitespace-nowrap ${category === "All"
+              ? "bg-pink-600 hover:bg-pink-700"
+              : "border-pink-200 text-pink-700"
+              }`}
             size="sm"
           >
             {category}
@@ -202,7 +173,7 @@ export default function NariSahasSection() {
                   {business.images && business.images.length > 0 && (
                     <div className="relative w-full h-48">
                       <Image
-                        src={business.images[0]}
+                        src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/application-docs/${business.image_url}` || business.images[0]}
                         alt={business.name}
                         fill
                         className="object-cover"
@@ -319,7 +290,7 @@ export default function NariSahasSection() {
                 selectedBusiness.images.length > 0 && (
                   <div className="relative w-full h-64 md:h-80 rounded-xl overflow-hidden">
                     <Image
-                      src={selectedBusiness.images[currentImageIndex]}
+                      src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/application-docs/${selectedBusiness.image_url}` || selectedBusiness.images[0]}
                       alt={selectedBusiness.name}
                       fill
                       className="object-cover"
@@ -351,11 +322,10 @@ export default function NariSahasSection() {
                       {selectedBusiness.images.map((_, index) => (
                         <div
                           key={index}
-                          className={`w-2 h-2 rounded-full ${
-                            index === currentImageIndex
-                              ? "bg-white"
-                              : "bg-white/50"
-                          }`}
+                          className={`w-2 h-2 rounded-full ${index === currentImageIndex
+                            ? "bg-white"
+                            : "bg-white/50"
+                            }`}
                         />
                       ))}
                     </div>
@@ -383,25 +353,6 @@ export default function NariSahasSection() {
                   </p>
                 </div>
               </div>
-
-              {/* Business ID and User ID Information */}
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <p className="text-xs text-gray-500">Business ID</p>
-                    <p className="text-sm font-medium text-gray-800 break-all">
-                      {selectedBusiness.id}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">User ID</p>
-                    <p className="text-sm font-medium text-gray-800 break-all">
-                      {selectedBusiness.user_id}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
               {/* Owner Information */}
               {selectedBusiness.owner && (
                 <div className="flex items-center bg-pink-50 p-3 rounded-lg">

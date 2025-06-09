@@ -37,7 +37,7 @@ export function MembersSearchBar({
             Delete ({selected.length})
           </Button>
         )}
-        <Button size="sm" onClick={openAddDialog}>
+        <Button size="sm" onClick={openAddDialog} disabled>
           <Plus className="mr-2 h-4 w-4" />
           Add Member
         </Button>
