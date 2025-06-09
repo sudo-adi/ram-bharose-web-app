@@ -12,6 +12,7 @@ import {
   Phone,
   Mail,
   Globe,
+  Award,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -52,10 +53,10 @@ export const ApplicationDetailDialog: React.FC<ApplicationDetailDialogProps> = (
     ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/application-docs/${selectedApplication.image_url}`
     : "https://via.placeholder.com/150";
 
-  const canApproveOrReject = applicationType === "event" || applicationType === "donation";
+  const canApproveOrReject = applicationType === "event" || applicationType === "donation" || applicationType === "nari_sahas";
 
-  // For non-event/donation applications, just show basic view with "Coming soon..." message for approval
-  if (applicationType !== "event" && applicationType !== "donation") {
+  // For non-event/donation/nari_sahas applications, just show basic view with "Coming soon..." message for approval
+  if (applicationType !== "event" && applicationType !== "donation" && applicationType !== "nari_sahas") {
     return (
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="sm:max-w-md md:max-w-lg">
@@ -100,6 +101,7 @@ export const ApplicationDetailDialog: React.FC<ApplicationDetailDialogProps> = (
   }
 
   const isEvent = applicationType === "event";
+  const isNariSahas = applicationType === "nari_sahas";
 
   // Get status badge color
   const getStatusColor = (status: string) => {
@@ -122,7 +124,9 @@ export const ApplicationDetailDialog: React.FC<ApplicationDetailDialogProps> = (
           <DialogTitle className="text-xl font-bold text-gray-800">
             {isEvent
               ? selectedApplication.name
-              : `Donation for ${selectedApplication.cause}`
+              : applicationType === "nari_sahas"
+                ? selectedApplication.name
+                : `Donation for ${selectedApplication.cause}`
             }
           </DialogTitle>
           <DialogDescription className="text-sm text-gray-500">
@@ -131,12 +135,12 @@ export const ApplicationDetailDialog: React.FC<ApplicationDetailDialogProps> = (
         </DialogHeader>
 
         <div className="space-y-4 mt-4">
-          {/* Only show images for event and donation applications */}
-          {selectedApplication.image_url && (applicationType === "event" || applicationType === "donation") && (
+          {/* Only show images for event, donation, and nari_sahas applications */}
+          {selectedApplication.image_url && (applicationType === "event" || applicationType === "donation" || applicationType === "nari_sahas") && (
             <div className="w-full h-48 relative rounded-md overflow-hidden border border-gray-200">
               <Image
                 src={fetchedImageUrl}
-                alt={isEvent ? "Event image" : "Donation image"}
+                alt={isEvent ? "Event image" : isNariSahas ? "Nari Sahas image" : "Donation image"}
                 fill
                 className="object-cover hover:scale-105 transition-transform duration-300"
                 onError={() => console.log("Error loading image")}
@@ -186,6 +190,58 @@ export const ApplicationDetailDialog: React.FC<ApplicationDetailDialogProps> = (
                   </div>
                   <p className="text-sm text-gray-600">
                     {selectedApplication.organizers.join(", ")}
+                  </p>
+                </div>
+                <div className="p-3 bg-white rounded-md border border-gray-200">
+                  <div className="flex items-center mb-2">
+                    <Phone className="h-4 w-4 mr-2 text-orange-500" />
+                    <h4 className="font-medium text-gray-700">Contact</h4>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    {selectedApplication.contact_phone}
+                  </p>
+                </div>
+                <div className="p-3 bg-white rounded-md border border-gray-200">
+                  <div className="flex items-center mb-2">
+                    <Mail className="h-4 w-4 mr-2 text-orange-500" />
+                    <h4 className="font-medium text-gray-700">Email</h4>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    {selectedApplication.contact_email}
+                  </p>
+                </div>
+                {selectedApplication.website && (
+                  <div className="p-3 bg-white rounded-md border border-gray-200">
+                    <div className="flex items-center mb-2">
+                      <Globe className="h-4 w-4 mr-2 text-orange-500" />
+                      <h4 className="font-medium text-gray-700">Website</h4>
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      <a href={selectedApplication.website} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+                        {selectedApplication.website}
+                      </a>
+                    </p>
+                  </div>
+                )}
+              </>
+            ) : isNariSahas ? (
+              <>
+                <div className="p-3 bg-white rounded-md border border-gray-200">
+                  <div className="flex items-center mb-2">
+                    <Award className="h-4 w-4 mr-2 text-orange-500" />
+                    <h4 className="font-medium text-gray-700">Category</h4>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    {selectedApplication.category}
+                  </p>
+                </div>
+                <div className="p-3 bg-white rounded-md border border-gray-200">
+                  <div className="flex items-center mb-2">
+                    <MapPin className="h-4 w-4 mr-2 text-orange-500" />
+                    <h4 className="font-medium text-gray-700">Location</h4>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    {selectedApplication.location}
                   </p>
                 </div>
                 <div className="p-3 bg-white rounded-md border border-gray-200">

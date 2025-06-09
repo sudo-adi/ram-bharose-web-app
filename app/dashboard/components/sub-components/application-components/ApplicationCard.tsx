@@ -12,6 +12,8 @@ import {
   Eye,
   Check,
   X,
+  Award,
+  MapPin,
 } from "lucide-react";
 import { ApplicationType } from "./types";
 
@@ -34,8 +36,8 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
   onUpdateStatus,
   formatDate,
 }) => {
-  // Only events and donations can be approved
-  const canApprove = type === "event" || type === "donation";
+  // Only events, donations, and nari_sahas can be approved
+  const canApprove = type === "event" || type === "donation" || type === "nari_sahas";
 
   // Get application title based on type
   const getApplicationTitle = () => {
@@ -44,6 +46,8 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
         return application.name;
       case "donation":
         return application.cause;
+      case "nari_sahas":
+        return application.name;
       case "education_loan":
       case "business_loan":
       case "girls_hostel":
@@ -62,6 +66,8 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
         return <Calendar className="h-3 w-3 mr-1 text-orange-500" />;
       case "donation":
         return <DollarSign className="h-3 w-3 mr-1 text-orange-500" />;
+      case "nari_sahas":
+        return <Award className="h-3 w-3 mr-1 text-orange-500" />;
       case "education_loan":
         return <School className="h-3 w-3 mr-1 text-orange-500" />;
       case "business_loan":
@@ -89,8 +95,8 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
     }
   };
 
-  // Get image URL - only for events and donations
-  const showImage = type === "event" || type === "donation";
+  // Get image URL - only for events, donations, and nari_sahas
+  const showImage = type === "event" || type === "donation" || type === "nari_sahas";
   const imageUrl = showImage && application.image_url
     ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/application-docs/${application.image_url}`
     : "https://via.placeholder.com/150";
@@ -109,6 +115,13 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
           <div className="flex items-center">
             <DollarSign className="h-3 w-3 mr-1 text-orange-500" />
             <span className="truncate">₹{application.amount.toLocaleString()}</span>
+          </div>
+        );
+      case "nari_sahas":
+        return (
+          <div className="flex items-center">
+            <Award className="h-3 w-3 mr-1 text-orange-500" />
+            <span className="truncate">{application.category}</span>
           </div>
         );
       case "education_loan":
@@ -152,6 +165,13 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
             <span className="truncate">
               Till {formatDate(application.open_till)}
             </span>
+          </div>
+        );
+      case "nari_sahas":
+        return (
+          <div className="flex items-center">
+            <MapPin className="h-3 w-3 mr-1 text-orange-500" />
+            <span className="truncate">{application.location}</span>
           </div>
         );
       case "education_loan":

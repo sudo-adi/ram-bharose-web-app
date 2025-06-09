@@ -33,6 +33,20 @@ export type DonationApplication = {
   status: ApplicationStatus;
 };
 
+export type NariSahasApplication = {
+  id: string; // uuid
+  user_id: string; // uuid
+  name: string;
+  category: string;
+  description: string;
+  location: string;
+  contact_email: string;
+  contact_phone: string;
+  website: string;
+  created_at: string; // timestamptz
+  status: ApplicationStatus;
+};
+
 // Loan Application Types
 export type EducationLoanApplication = {
   id: string; // uuid
@@ -238,7 +252,8 @@ export type ApplicationType =
   | "business_loan"
   | "girls_hostel"
   | "mulund_hostel"
-  | "vatsalyadham";
+  | "vatsalyadham"
+  | "nari_sahas";
 
 export type LoanApplicationType = "education_loan" | "business_loan";
 export type HostelApplicationType = "girls_hostel" | "mulund_hostel" | "vatsalyadham";

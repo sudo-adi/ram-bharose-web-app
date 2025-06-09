@@ -21,7 +21,8 @@ import {
   MulundHostelApplication,
   VatsalyadhamApplication,
   LoanApplicationType,
-  HostelApplicationType
+  HostelApplicationType,
+  NariSahasApplication
 } from "./sub-components/application-components/types";
 
 const ApplicationsSection = () => {
@@ -33,6 +34,7 @@ const ApplicationsSection = () => {
   const [girlsHostelApplications, setGirlsHostelApplications] = useState<GirlsHostelApplication[]>([]);
   const [mulundHostelApplications, setMulundHostelApplications] = useState<MulundHostelApplication[]>([]);
   const [vatsalyadhamApplications, setVatsalyadhamApplications] = useState<VatsalyadhamApplication[]>([]);
+  const [nariSahasApplications, setNariSahasApplications] = useState<NariSahasApplication[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,6 +51,7 @@ const ApplicationsSection = () => {
   const [filteredGirlsHostelApplications, setFilteredGirlsHostelApplications] = useState<GirlsHostelApplication[]>([]);
   const [filteredMulundHostelApplications, setFilteredMulundHostelApplications] = useState<MulundHostelApplication[]>([]);
   const [filteredVatsalyadhamApplications, setFilteredVatsalyadhamApplications] = useState<VatsalyadhamApplication[]>([]);
+  const [filteredNariSahasApplications, setFilteredNariSahasApplications] = useState<NariSahasApplication[]>([]);
 
   // State for application detail dialog
   const [selectedApplication, setSelectedApplication] = useState<any>(null);
@@ -102,6 +105,12 @@ const ApplicationsSection = () => {
         .select("*");
       if (vatsalyadhamError) throw vatsalyadhamError;
 
+      // Fetch nari sahas applications
+      const { data: nariSahasData, error: nariSahasError } = await supabase
+        .from("nari_sahas_applications")
+        .select("*");
+      if (nariSahasError) throw nariSahasError;
+
       setEventApplications(eventData || []);
       setDonationApplications(donationData || []);
       setEducationLoanApplications(educationLoanData || []);
@@ -109,6 +118,7 @@ const ApplicationsSection = () => {
       setGirlsHostelApplications(girlsHostelData || []);
       setMulundHostelApplications(mulundHostelData || []);
       setVatsalyadhamApplications(vatsalyadhamData || []);
+      setNariSahasApplications(nariSahasData || []);
     } catch (err: any) {
       setError(err.message);
       console.error("Error fetching applications:", err);
@@ -127,6 +137,7 @@ const ApplicationsSection = () => {
       case "girls_hostel": return "girls_hostel_form";
       case "mulund_hostel": return "mulund_hostel_form";
       case "vatsalyadham": return "vatsalyadham_form";
+      case "nari_sahas": return "nari_sahas_applications";
       default: return "";
     }
   };
@@ -136,6 +147,7 @@ const ApplicationsSection = () => {
     switch (type) {
       case "event": return "events";
       case "donation": return "donations";
+      case "nari_sahas": return "nari_sahas";
       default: return null;
     }
   };
@@ -149,8 +161,8 @@ const ApplicationsSection = () => {
     try {
       const tableName = getTableName(type);
 
-      // Only event and donation applications can be moved to main table when approved
-      if ((type === "event" || type === "donation") && status === "approved") {
+      // Event, donation, and nari_sahas applications can be moved to main table when approved
+      if ((type === "event" || type === "donation" || type === "nari_sahas") && status === "approved") {
         // Get the application data
         const { data: applicationData, error: fetchError } = await supabase
           .from(tableName)
@@ -284,6 +296,15 @@ const ApplicationsSection = () => {
       );
       setFilteredVatsalyadhamApplications(filtered);
     }
+
+    // Filter nari sahas applications
+    if (nariSahasApplications.length > 0) {
+      const filtered = nariSahasApplications.filter((app) =>
+        app.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        app.category?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setFilteredNariSahasApplications(filtered);
+    }
   }, [
     searchQuery,
     eventApplications,
@@ -292,7 +313,8 @@ const ApplicationsSection = () => {
     businessLoanApplications,
     girlsHostelApplications,
     mulundHostelApplications,
-    vatsalyadhamApplications
+    vatsalyadhamApplications,
+    nariSahasApplications
   ]);
 
   // Load applications on component mount
@@ -407,6 +429,9 @@ const ApplicationsSection = () => {
             <TabsTrigger value="donations" className="px-4 py-2">
               Donation Applications
             </TabsTrigger>
+            <TabsTrigger value="nari_sahas" className="px-4 py-2">
+              Nari Sahas Applications
+            </TabsTrigger>
             <TabsTrigger value="loans" className="px-4 py-2">
               Loan Applications
             </TabsTrigger>
@@ -438,6 +463,22 @@ const ApplicationsSection = () => {
                   : donationApplications
               }
               type="donation"
+              onView={viewApplicationDetails}
+              onUpdateStatus={updateApplicationStatus}
+              formatDate={formatDate}
+              searchQuery={searchQuery}
+            />
+          </TabsContent>
+
+          {/* Nari Sahas Applications */}
+          <TabsContent value="nari_sahas" className="pt-2">
+            <ApplicationList
+              applications={
+                searchQuery
+                  ? filteredNariSahasApplications
+                  : nariSahasApplications
+              }
+              type="nari_sahas"
               onView={viewApplicationDetails}
               onUpdateStatus={updateApplicationStatus}
               formatDate={formatDate}
