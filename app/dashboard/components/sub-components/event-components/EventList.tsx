@@ -13,7 +13,6 @@ interface EventListProps {
 }
 
 export function EventList({ events, searchQuery }: EventListProps) {
-    console.log("Rendering EventList with events:", events);
     if (events.length === 0) {
         return (
             <div className="text-center py-10">

@@ -89,11 +89,11 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
     }
   };
 
-  // Get image URL
-  const imageUrl = application.image_url
+  // Get image URL - only for events and donations
+  const showImage = type === "event" || type === "donation";
+  const imageUrl = showImage && application.image_url
     ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/application-docs/${application.image_url}`
     : "https://via.placeholder.com/150";
-
   // Get first detail to show based on application type
   const getPrimaryDetail = () => {
     switch (type) {
@@ -173,9 +173,6 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
     }
   };
 
-  // Only show images for event and donation applications
-  const showImage = type === "event" || type === "donation";
-
   return (
     <div className="bg-white rounded-lg overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col h-full">
       <div className="relative h-40 w-full overflow-hidden">
@@ -188,9 +185,9 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
             onError={() => console.log("Error loading image")}
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gray-100">
+          <div className="w-full h-full bg-gray-100 flex items-center justify-center">
             {getCardIcon()}
-            <span className="text-sm font-medium text-gray-500 ml-2">{getApplicationTitle()}</span>
+            <span className="text-sm font-medium text-gray-500 ml-2">{type.replace('_', ' ')}</span>
           </div>
         )}
         <div className="absolute top-2 right-2">

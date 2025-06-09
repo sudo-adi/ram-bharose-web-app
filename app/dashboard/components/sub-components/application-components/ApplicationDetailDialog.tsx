@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useEffect } from "react";
+import Image from "next/image";
 import {
   Dialog,
   DialogContent,
@@ -47,7 +48,10 @@ export const ApplicationDetailDialog: React.FC<ApplicationDetailDialogProps> = (
 }) => {
   if (!selectedApplication) return null;
 
-  // Only allow approving and rejecting for events and donation applications as requested
+  const fetchedImageUrl = (selectedApplication.image_url)
+    ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/application-docs/${selectedApplication.image_url}`
+    : "https://via.placeholder.com/150";
+
   const canApproveOrReject = applicationType === "event" || applicationType === "donation";
 
   // For non-event/donation applications, just show basic view with "Coming soon..." message for approval
@@ -127,12 +131,15 @@ export const ApplicationDetailDialog: React.FC<ApplicationDetailDialogProps> = (
         </DialogHeader>
 
         <div className="space-y-4 mt-4">
+          {/* Only show images for event and donation applications */}
           {selectedApplication.image_url && (applicationType === "event" || applicationType === "donation") && (
             <div className="w-full h-48 relative rounded-md overflow-hidden border border-gray-200">
-              <img
-                src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/application-pictures/${selectedApplication.image_url}`}
+              <Image
+                src={fetchedImageUrl}
                 alt={isEvent ? "Event image" : "Donation image"}
-                className="object-cover w-full h-full"
+                fill
+                className="object-cover hover:scale-105 transition-transform duration-300"
+                onError={() => console.log("Error loading image")}
               />
             </div>
           )}

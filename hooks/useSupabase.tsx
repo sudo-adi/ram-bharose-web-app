@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase";
 import { useState, useEffect } from "react";
 import { decode } from 'base64-arraybuffer';
 import { Event } from "../app/dashboard/components/sub-components/event-components/types";
+import { Donation } from "../app/dashboard/components/sub-components/donation-components/types";
 
 // Hook for member operations (add, update, delete)
 export const useMemberOperations = () => {
@@ -1409,7 +1410,6 @@ export const useAddProfile = () => {
 };
 
 
-
 // Add this hook with your other hooks
 export const useEvents = () => {
   const [result, setResult] = useState<UseQueryResult<Event[]>>({
@@ -1460,4 +1460,55 @@ export const useEvents = () => {
   }, []);
 
   return { ...result, refetch: fetchEvents };
+};
+
+// Add this hook with your other hooks
+export const useDonations = () => {
+  const [result, setResult] = useState<UseQueryResult<Donation[]>>({
+    data: null,
+    error: null,
+    loading: true,
+  });
+
+  const fetchDonations = async () => {
+    try {
+      setResult((prev) => ({ ...prev, loading: true }));
+
+      const { data, error } = await supabase
+        .from("donations")
+        .select("*")
+        .order("submitted_at", { ascending: false });
+
+      if (error) throw error;
+
+      // Transform image URLs to include the full path
+      const donationsWithFullImageUrls = data?.map(donation => {
+        if (donation.image_url) {
+          return {
+            ...donation,
+            image_url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/application-docs/${donation.image_url}`
+          };
+        }
+        return donation;
+      });
+
+      setResult({
+        data: donationsWithFullImageUrls || [],
+        error: null,
+        loading: false,
+      });
+    } catch (error) {
+      setResult({
+        data: null,
+        error: error as Error,
+        loading: false,
+      });
+    }
+  };
+
+  useEffect(() => {
+    fetchDonations();
+  }, []);
+
+  return { ...result, refetch: fetchDonations };
 };
