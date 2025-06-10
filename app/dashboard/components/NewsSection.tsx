@@ -1,17 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Image from "next/image";
 import { useNews } from "@/hooks/useSupabase";
+import { supabase } from "@/lib/supabase";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Search,
@@ -20,6 +24,9 @@ import {
   ShareIcon,
   RefreshCw,
   Newspaper,
+  Plus,
+  Upload,
+  Loader2,
 } from "lucide-react";
 
 interface Article {
@@ -36,6 +43,17 @@ const NewsSection = () => {
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredArticles, setFilteredArticles] = useState<Article[]>([]);
+
+  // Add news states
+  const [isAddMode, setIsAddMode] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [newsForm, setNewsForm] = useState({
+    title: "",
+    body: "",
+  });
 
   const {
     data: newsArticles,
@@ -72,7 +90,100 @@ const NewsSection = () => {
     refetchNews();
   };
 
+  const handleOpenAddDialog = () => {
+    setNewsForm({ title: "", body: "" });
+    setImageFile(null);
+    setImagePreview(null);
+    setIsSubmitting(false);
+    setIsAddMode(true);
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = async () => {
+    try {
+      setIsSubmitting(true);
+
+      // Validate form
+      if (!newsForm.title.trim() || !newsForm.body.trim()) {
+        alert("Please fill in all required fields");
+        setIsSubmitting(false);
+        return;
+      }
+
+      // 1. Create news article entry
+      const { data: articleData, error: articleError } = await supabase
+        .from("articles")
+        .insert([
+          {
+            title: newsForm.title,
+            body: newsForm.body,
+            header_image_url: "", // Will be updated after image upload
+          },
+        ])
+        .select()
+        .single();
+
+      if (articleError || !articleData) {
+        throw new Error(articleError?.message || "Error creating article");
+      }
+
+      if (imageFile) {
+        // 2. Upload image to storage
+        const fileExt = imageFile.name.split(".").pop();
+        const fileName = `${articleData.id}.${fileExt}`;
+        const { error: uploadError, data: uploadData } = await supabase.storage
+          .from("articles")
+          .upload(fileName, imageFile);
+
+        if (uploadError) {
+          throw new Error(uploadError.message);
+        }
+
+        // 3. Get public URL and update article
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from("articles").getPublicUrl(fileName);
+
+        const { error: updateError } = await supabase
+          .from("articles")
+          .update({ header_image_url: publicUrl })
+          .eq("id", articleData.id);
+
+        if (updateError) {
+          throw new Error(updateError.message);
+        }
+      }
+
+      // Reset form and refresh articles
+      setNewsForm({ title: "", body: "" });
+      setImageFile(null);
+      setImagePreview(null);
+      setIsAddMode(false);
+      await refetchNews();
+    } catch (error) {
+      console.error("Error submitting article:", error);
+      alert(error instanceof Error ? error.message : "Error submitting article");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
   const displayArticles = searchQuery ? filteredArticles : newsArticles || [];
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setNewsForm(prev => ({ ...prev, [name]: value }));
+  };
 
   if (loading) {
     return (
@@ -121,25 +232,34 @@ const NewsSection = () => {
             </p>
           </div>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefresh}
-            disabled={loading}
-            className="mt-2 sm:mt-0 border-gray-200 hover:bg-gray-50 hover:text-orange-600"
-          >
-            {loading ? (
-              <span className="flex items-center gap-2">
-                <RefreshCw className="h-4 w-4 animate-spin" />
-                <span className="text-xs">Refreshing</span>
-              </span>
-            ) : (
-              <span className="flex items-center gap-2">
-                <RefreshCw className="h-4 w-4" />
-                <span className="text-xs">Refresh</span>
-              </span>
-            )}
-          </Button>
+          <div className="flex gap-2 mt-2 sm:mt-0">
+            <Button
+              onClick={handleOpenAddDialog}
+              className="bg-orange-500 hover:bg-orange-600 text-white"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Post News
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={loading}
+              className="border-gray-200 hover:bg-gray-50 hover:text-orange-600"
+            >
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <span className="text-xs">Refreshing</span>
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <RefreshCw className="h-4 w-4" />
+                  <span className="text-xs">Refresh</span>
+                </span>
+              )}
+            </Button>
+          </div>
         </div>
 
         {/* Search Bar */}
@@ -297,6 +417,111 @@ const NewsSection = () => {
               </DialogFooter>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Add/Edit News Dialog */}
+      <Dialog open={isAddMode} onOpenChange={setIsAddMode}>
+        <DialogContent className="sm:max-w-md md:max-w-lg lg:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedArticle ? "Edit Article" : "Post a New Article"}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedArticle
+                ? "Edit the details of the article"
+                : "Fill in the details to post a new article"}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Title Input */}
+            <div>
+              <Label htmlFor="title" className="font-medium">
+                Title
+              </Label>
+              <Input
+                id="title"
+                name="title"
+                type="text"
+                placeholder="Enter article title"
+                className="mt-1 bg-white border-gray-200 focus:border-orange-300 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
+                value={newsForm.title}
+                onChange={handleInputChange}
+              />
+            </div>
+
+            {/* Body Textarea */}
+            <div>
+              <Label htmlFor="body" className="font-medium">
+                Body
+              </Label>
+              <Textarea
+                id="body"
+                name="body"
+                placeholder="Enter article body"
+                className="mt-1 bg-white border-gray-200 focus:border-orange-300 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
+                value={newsForm.body}
+                onChange={handleInputChange}
+                rows={4}
+              />
+            </div>
+
+            {/* Image Upload */}
+            <div>
+              <Label className="font-medium">Header Image</Label>
+              <div className="flex items-center gap-4 mt-2">
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center bg-orange-500 text-white rounded-md px-4 py-2 hover:bg-orange-600 transition-all duration-200"
+                >
+                  <Upload className="h-5 w-5 mr-2" />
+                  Upload Image
+                </button>
+                {imagePreview && (
+                  <div className="relative h-20 w-20 rounded-md overflow-hidden">
+                    <Image
+                      src={imagePreview}
+                      alt="Image preview"
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                )}
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={() => setIsAddMode(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <div className="flex items-center justify-center">
+                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                  <span>Saving...</span>
+                </div>
+              ) : (
+                "Post Article"
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
