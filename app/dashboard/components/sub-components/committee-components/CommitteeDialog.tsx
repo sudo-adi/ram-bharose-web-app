@@ -118,14 +118,6 @@ export function CommitteeDialog({
       <DialogContent className="sm:max-w-md md:max-w-lg lg:max-w-xl">
         <DialogHeader>
           <div className="flex items-center gap-4">
-            <div className="relative h-16 w-16 rounded-lg overflow-hidden flex-shrink-0">
-              <Image
-                src={committee.image}
-                alt={committee.name}
-                fill
-                className="object-cover"
-              />
-            </div>
             <div className="flex-1">
               <DialogTitle className="text-lg font-bold text-gray-800">
                 {committee.name}

@@ -44,18 +44,8 @@ export function CommitteeList({
           key={committee.id}
           className="bg-white rounded-lg overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col"
         >
-          <div className="relative h-40 w-full overflow-hidden">
-            <Image
-              src={committee.image}
-              alt={committee.name}
-              fill
-              className="object-cover hover:scale-105 transition-transform duration-300"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.src =
-                  "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?q=80&w=300";
-              }}
-            />
+          <div className="relative h-10 w-full overflow-hidden">
+
             <div className="absolute top-2 right-2 flex gap-1">
               <button
                 onClick={(e) => {

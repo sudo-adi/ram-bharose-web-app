@@ -333,10 +333,6 @@ export function DoctorsSection() {
                       </span>
                     </div>
                     <div className="flex items-center text-sm text-gray-600">
-                      <Clock className="h-4 w-4 mr-2 flex-shrink-0" />
-                      <span>{doctor.experience_years} years experience</span>
-                    </div>
-                    <div className="flex items-center text-sm text-gray-600">
                       <MapPin className="h-4 w-4 mr-2 flex-shrink-0" />
                       <span className="line-clamp-1">
                         {doctor.clinic_address}
