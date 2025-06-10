@@ -24,10 +24,9 @@ import {
 
 interface Article {
   id: string;
-  user_id: string;
   title: string;
   body: string;
-  image: string;
+  header_image_url: string;
   created_at: string;
   userName: string;
 }
@@ -45,6 +44,7 @@ const NewsSection = () => {
     refetch: refetchNews,
   } = useNews();
 
+  // console.log("Rendering NewsSection with newsArticles:", newsArticles);
   // Filter articles based on search query
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -170,11 +170,10 @@ const NewsSection = () => {
             (category) => (
               <button
                 key={category}
-                className={`mr-2 px-4 py-2 rounded-full ${
-                  category === "All"
-                    ? "bg-orange-500 text-white"
-                    : "bg-gray-100 text-gray-700"
-                } font-medium whitespace-nowrap`}
+                className={`mr-2 px-4 py-2 rounded-full ${category === "All"
+                  ? "bg-orange-500 text-white"
+                  : "bg-gray-100 text-gray-700"
+                  } font-medium whitespace-nowrap`}
               >
                 {category}
               </button>
@@ -193,7 +192,7 @@ const NewsSection = () => {
               >
                 <div className="relative h-40 w-full overflow-hidden">
                   <Image
-                    src={article.image}
+                    src={article.header_image_url}
                     alt={article.title}
                     fill
                     className="object-cover hover:scale-105 transition-transform duration-300"
@@ -216,10 +215,6 @@ const NewsSection = () => {
                   <p className="text-gray-600 text-sm line-clamp-2 mb-3 flex-grow">
                     {article.body}
                   </p>
-                  <div className="flex items-center mt-auto pt-2 border-t border-gray-100">
-                    <div className="w-6 h-6 bg-gray-200 rounded-full mr-2" />
-                    <p className="text-gray-700 text-xs">{article.userName}</p>
-                  </div>
                 </div>
               </div>
             ))}
@@ -254,7 +249,7 @@ const NewsSection = () => {
                 {/* Main Image */}
                 <div className="relative w-full h-56 rounded-xl overflow-hidden">
                   <Image
-                    src={selectedArticle.image}
+                    src={selectedArticle.header_image_url}
                     alt={selectedArticle.title}
                     fill
                     className="object-cover"
@@ -268,12 +263,6 @@ const NewsSection = () => {
                   </h1>
 
                   <div className="flex justify-between items-center mb-4">
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 bg-gray-200 rounded-full mr-2" />
-                      <p className="text-gray-700">
-                        {selectedArticle.userName}
-                      </p>
-                    </div>
                     <p className="text-gray-500 text-sm">
                       {formatDate(selectedArticle.created_at)}
                     </p>

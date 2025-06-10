@@ -159,10 +159,9 @@ type Profile = {
 
 interface Article {
   id: string;
-  user_id: string;
   title: string;
   body: string;
-  image: string;
+  header_image_url: string;
   created_at: string;
   userName: string;
 }
@@ -1155,40 +1154,9 @@ export const useNews = () => {
 
       if (articlesError) throw articlesError;
 
-      const articlesWithUserNames = await Promise.all(
-        articles.map(async (article) => {
-          const { data: userProfile, error: profileError } = await supabase
-            .from("profiles")
-            .select("name")
-            .eq("id", article.user_id)
-            .single();
-
-          if (profileError) throw profileError;
-
-          return {
-            ...article,
-            userName: userProfile.name,
-          };
-        })
-      );
-
-      const articlesWithImages = await Promise.all(
-        articlesWithUserNames.map(async (article) => {
-          const { data: imageData } = supabase.storage
-            .from("articles")
-            .getPublicUrl(article.user_id);
-
-          return {
-            ...article,
-            image: imageData.publicUrl + ".jpg",
-          };
-        })
-      );
-
-      if (!articlesWithImages) throw new Error("No articles found");
 
       setResult({
-        data: articlesWithImages,
+        data: articles,
         error: null,
         loading: false,
       });
