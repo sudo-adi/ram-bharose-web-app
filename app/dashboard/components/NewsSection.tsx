@@ -173,16 +173,20 @@ const NewsSection = () => {
       await refetchNews();
     } catch (error) {
       console.error("Error submitting article:", error);
-      alert(error instanceof Error ? error.message : "Error submitting article");
+      alert(
+        error instanceof Error ? error.message : "Error submitting article"
+      );
     } finally {
       setIsSubmitting(false);
     }
   };
   const displayArticles = searchQuery ? filteredArticles : newsArticles || [];
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
-    setNewsForm(prev => ({ ...prev, [name]: value }));
+    setNewsForm((prev) => ({ ...prev, [name]: value }));
   };
 
   if (loading) {
@@ -281,23 +285,6 @@ const NewsSection = () => {
             >
               <X className="h-4 w-4 text-gray-500" />
             </button>
-          )}
-        </div>
-
-        {/* News Categories */}
-        <div className="flex overflow-x-auto mb-6 pb-2 no-scrollbar">
-          {["All", "Events", "Education", "Health", "Culture"].map(
-            (category) => (
-              <button
-                key={category}
-                className={`mr-2 px-4 py-2 rounded-full ${category === "All"
-                  ? "bg-orange-500 text-white"
-                  : "bg-gray-100 text-gray-700"
-                  } font-medium whitespace-nowrap`}
-              >
-                {category}
-              </button>
-            )
           )}
         </div>
 

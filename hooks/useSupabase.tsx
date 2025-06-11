@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { useState, useEffect } from "react";
-import { decode } from 'base64-arraybuffer';
+import { decode } from "base64-arraybuffer";
 import { Event } from "../app/dashboard/components/sub-components/event-components/types";
 import { Donation } from "../app/dashboard/components/sub-components/donation-components/types";
 
@@ -12,16 +12,16 @@ export const useMemberOperations = () => {
   const uploadProfilePicture = async (base64Data: string, fileName: string) => {
     const decodedFile = decode(base64Data);
     const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('profile-pictures')
+      .from("profile-pictures")
       .upload(fileName, decodedFile, {
-        contentType: 'image/jpeg'
+        contentType: "image/jpeg",
       });
 
     if (uploadError) throw uploadError;
 
-    const { data: { publicUrl } } = supabase.storage
-      .from('profile-pictures')
-      .getPublicUrl(fileName);
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from("profile-pictures").getPublicUrl(fileName);
 
     return publicUrl;
   };
@@ -34,30 +34,33 @@ export const useMemberOperations = () => {
       const profileData = {
         ...member,
         family_no: Number(member.family_no),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       };
 
       // Handle profile picture upload if it's a base64 string
-      if (member.profile_pic?.startsWith('data:image')) {
-        const base64Data = member.profile_pic.split(',')[1];
+      if (member.profile_pic?.startsWith("data:image")) {
+        const base64Data = member.profile_pic.split(",")[1];
         const fileName = `profile-${Date.now()}.jpg`;
-        profileData.profile_pic = await uploadProfilePicture(base64Data, fileName);
+        profileData.profile_pic = await uploadProfilePicture(
+          base64Data,
+          fileName
+        );
       }
 
       let result;
       if (isUpdate && member.id) {
         // Update existing profile
         result = await supabase
-          .from('profiles')
+          .from("profiles")
           .update(profileData)
-          .eq('id', member.id)
+          .eq("id", member.id)
           .select()
           .single();
       } else {
         // Add new profile
         const profileDataWithoutId = { ...profileData };
         result = await supabase
-          .from('profiles')
+          .from("profiles")
           .insert(profileDataWithoutId)
           .select()
           .single();
@@ -78,10 +81,7 @@ export const useMemberOperations = () => {
     setError(null);
 
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from("profiles").delete().eq("id", id);
 
       if (error) throw error;
     } catch (err) {
@@ -96,7 +96,7 @@ export const useMemberOperations = () => {
     loading,
     error,
     saveMember,
-    deleteMember
+    deleteMember,
   };
 };
 
@@ -945,13 +945,10 @@ export const useBusiness = () => {
 
           const logoUrl =
             logoData && logoData.length > 0
-              ? (
-                supabase.storage
+              ? supabase.storage
                   .from("businesses")
-                  .getPublicUrl(
-                    `${business.user_id}/logo/${logoData[0].name}`
-                  )
-              ).data.publicUrl
+                  .getPublicUrl(`${business.user_id}/logo/${logoData[0].name}`)
+                  .data.publicUrl
               : null;
 
           // Get business images
@@ -1153,7 +1150,6 @@ export const useNews = () => {
         .select("*");
 
       if (articlesError) throw articlesError;
-
 
       setResult({
         data: articles,
@@ -1378,7 +1374,6 @@ export const useAddProfile = () => {
   return { addProfile, loading, error, success };
 };
 
-
 // Add this hook with your other hooks
 export const useEvents = () => {
   const [result, setResult] = useState<UseQueryResult<Event[]>>({
@@ -1391,21 +1386,21 @@ export const useEvents = () => {
     try {
       setResult((prev) => ({ ...prev, loading: true }));
       const { data: events, error } = await supabase
-        .from('events')
-        .select('*')
-        .order('start_at', { ascending: true });
+        .from("events")
+        .select("*")
+        .order("start_at", { ascending: true });
 
       if (error) throw error;
 
       // Transform events to include proper image URLs
-      const eventsWithImages = events.map(event => {
+      const eventsWithImages = events.map((event) => {
         const { data: imageData } = supabase.storage
-          .from('application-docs')
+          .from("application-docs")
           .getPublicUrl(`${event.image_url}`);
 
         return {
           ...event,
-          image_url: imageData.publicUrl
+          image_url: imageData.publicUrl,
         };
       });
 
@@ -1451,11 +1446,11 @@ export const useDonations = () => {
       if (error) throw error;
 
       // Transform image URLs to include the full path
-      const donationsWithFullImageUrls = data?.map(donation => {
+      const donationsWithFullImageUrls = data?.map((donation) => {
         if (donation.image_url) {
           return {
             ...donation,
-            image_url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/application-docs/${donation.image_url}`
+            image_url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/application-docs/${donation.image_url}`,
           };
         }
         return donation;

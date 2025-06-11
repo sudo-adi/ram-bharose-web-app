@@ -5,7 +5,14 @@ const nextConfig = {
     optimizeCss: false,
   },
   images: {
+    domains: ["kmxrfddgzveqlmsvmsub.supabase.co"],
     remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "drive.google.com",
+        port: "",
+        pathname: "/thumbnail**",
+      },
       {
         protocol: "https",
         hostname: "temwbfnjuxnvskqddgqa.supabase.co",

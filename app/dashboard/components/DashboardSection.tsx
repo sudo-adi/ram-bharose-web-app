@@ -63,6 +63,15 @@ export function DashboardSection({ setActiveSection }: DashboardSectionProps) {
       setLoading(true);
 
       // Get gender distribution
+      const {
+        data: profileData,
+        count: countRows,
+        error: profileError,
+      } = await supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true });
+
+      // Get gender distribution
       const { data: genderData, error: genderError } = await supabase
         .from("profiles")
         .select("gender");
@@ -134,15 +143,15 @@ export function DashboardSection({ setActiveSection }: DashboardSectionProps) {
 
       // Update stats
       setStats({
-        totalMembers: genderData?.length || 0,
+        totalMembers: countRows || 0,
         totalFamilies: uniqueFamilies.size,
         totalDoctors: doctorsCount || 0,
         totalCommittees: committeesData?.length || 0,
         totalEvents: eventsCount || 0,
         totalApplications: applicationsCount || 0,
         totalDonations: donationsCount || 0,
-        maleCount,
-        femaleCount,
+        maleCount: maleCount,
+        femaleCount: femaleCount,
         otherCount,
       });
 

@@ -73,7 +73,6 @@ export default function NariSahasSection() {
 
   // Fallback to sample data if no businesses are found
 
-
   // Fix 1: Add null check for businesses
   const displayBusinesses = businesses || [];
 
@@ -135,30 +134,6 @@ export default function NariSahasSection() {
         </div>
       </div>
 
-      {/* Category Filters */}
-      <div className="flex overflow-x-auto pb-2 mb-6 no-scrollbar">
-        {[
-          "All",
-          "Food & Beverages",
-          "Retail",
-          "Technology",
-          "Health & Beauty",
-          "Arts & Crafts",
-        ].map((category) => (
-          <Button
-            key={category}
-            variant={category === "All" ? "default" : "outline"}
-            className={`mr-2 whitespace-nowrap ${category === "All"
-              ? "bg-pink-600 hover:bg-pink-700"
-              : "border-pink-200 text-pink-700"
-              }`}
-            size="sm"
-          >
-            {category}
-          </Button>
-        ))}
-      </div>
-
       {/* Business Cards Grid */}
       {filteredBusinesses.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -173,7 +148,10 @@ export default function NariSahasSection() {
                   {business.images && business.images.length > 0 && (
                     <div className="relative w-full h-48">
                       <Image
-                        src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/application-docs/${business.image_url}` || business.images[0]}
+                        src={
+                          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/application-docs/${business.image_url}` ||
+                          business.images[0]
+                        }
                         alt={business.name}
                         fill
                         className="object-cover"
@@ -290,7 +268,10 @@ export default function NariSahasSection() {
                 selectedBusiness.images.length > 0 && (
                   <div className="relative w-full h-64 md:h-80 rounded-xl overflow-hidden">
                     <Image
-                      src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/application-docs/${selectedBusiness.image_url}` || selectedBusiness.images[0]}
+                      src={
+                        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/application-docs/${selectedBusiness.image_url}` ||
+                        selectedBusiness.images[0]
+                      }
                       alt={selectedBusiness.name}
                       fill
                       className="object-cover"
@@ -322,10 +303,11 @@ export default function NariSahasSection() {
                       {selectedBusiness.images.map((_, index) => (
                         <div
                           key={index}
-                          className={`w-2 h-2 rounded-full ${index === currentImageIndex
-                            ? "bg-white"
-                            : "bg-white/50"
-                            }`}
+                          className={`w-2 h-2 rounded-full ${
+                            index === currentImageIndex
+                              ? "bg-white"
+                              : "bg-white/50"
+                          }`}
                         />
                       ))}
                     </div>

@@ -14,16 +14,16 @@ export const ShubhChintakSection = () => {
 
   // Filter magazines based on search query
   const filteredMagazines =
-    magazines?.filter((magazine) =>
-      magazine.title.toLowerCase().includes(searchQuery.toLowerCase())
+    magazines?.filter((magazine: any) =>
+      magazine.name.toLowerCase().includes(searchQuery.toLowerCase())
     ) || [];
 
   // Handle opening the magazine PDF
-  const handleOpenMagazine = (fileUrl: string) => {
-    if (fileUrl) {
-      window.open(fileUrl, "_blank");
+  const handleOpenMagazine = (link: string) => {
+    if (link) {
+      window.open(link, "_blank");
     } else {
-      console.error("No file URL available for this magazine");
+      console.error("No link available for this magazine");
       alert("This magazine is not available at the moment.");
     }
   };
@@ -128,7 +128,7 @@ export const ShubhChintakSection = () => {
         {/* Magazines Grid */}
         {filteredMagazines.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-            {filteredMagazines.map((magazine) => (
+            {filteredMagazines.map((magazine: any) => (
               <div
                 key={magazine.id}
                 className="bg-white rounded-lg overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col"
@@ -136,10 +136,10 @@ export const ShubhChintakSection = () => {
                 <div className="relative h-40 w-full overflow-hidden">
                   <Image
                     src={
-                      magazine.cover_image_url ||
+                      magazine.cover_image_link ||
                       "https://via.placeholder.com/150"
                     }
-                    alt={magazine.title}
+                    alt={magazine.name}
                     fill
                     className="object-cover hover:scale-105 transition-transform duration-300"
                     onError={() => console.log("Error loading cover image")}
@@ -147,11 +147,11 @@ export const ShubhChintakSection = () => {
                 </div>
                 <div className="p-2 flex-1">
                   <h3 className="text-gray-800 font-medium text-sm line-clamp-2">
-                    {magazine.title}
+                    {magazine.name}
                   </h3>
                 </div>
                 <button
-                  onClick={() => handleOpenMagazine(magazine.file_url)}
+                  onClick={() => handleOpenMagazine(magazine.link)}
                   className="w-full bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium py-2 flex items-center justify-center gap-1"
                 >
                   <ExternalLink className="h-3 w-3" /> Read Now
